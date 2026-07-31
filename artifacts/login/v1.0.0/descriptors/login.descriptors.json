@@ -1,0 +1,289 @@
+{
+  "schema": "login",
+  "version": "1.0.0",
+  "namespace": "https://gep.com/ontology/login#",
+  "descriptors": {
+    "User": {
+      "class": "User",
+      "datasource": "sqlserver",
+      "version": "1.0.0",
+      "table": "UM_Users",
+      "link_key": "username",
+      "primary_key": "userId",
+      "properties": [
+        {
+          "name": "userId",
+          "range": "integer",
+          "required": true,
+          "sql_column": "userid",
+          "sql_type": "INT"
+        },
+        {
+          "name": "username",
+          "range": "string",
+          "required": true,
+          "sql_column": "username",
+          "sql_type": "NVARCHAR",
+          "cross_source_link": "UserDocument.userName"
+        },
+        {
+          "name": "emailAddress",
+          "range": "string",
+          "required": true,
+          "sql_column": "emailaddress",
+          "sql_type": "NVARCHAR"
+        },
+        {
+          "name": "firstName",
+          "range": "string",
+          "required": false,
+          "sql_column": "firstName",
+          "sql_type": "NVARCHAR"
+        },
+        {
+          "name": "lastName",
+          "range": "string",
+          "required": false,
+          "sql_column": "lastName",
+          "sql_type": "NVARCHAR"
+        },
+        {
+          "name": "authenticationType",
+          "range": "AuthenticationTypeEnum",
+          "required": true,
+          "sql_column": "authenticationtype",
+          "sql_type": "INT",
+          "mongo_field": "authenticationType",
+          "mongo_type": "INT",
+          "enum_integer_map": {
+            "1": "Password",
+            "2": "SSO"
+          }
+        },
+        {
+          "name": "isLocked",
+          "range": "SqlBit",
+          "required": false,
+          "sql_column": "islocked",
+          "sql_type": "BIT",
+          "normalize_to_bool": true,
+          "login_block_condition": "value = 1"
+        },
+        {
+          "name": "isActive",
+          "range": "SqlBit",
+          "required": false,
+          "sql_column": "isactive",
+          "sql_type": "BIT",
+          "normalize_to_bool": true,
+          "login_block_condition": "value = 0"
+        },
+        {
+          "name": "isdCode",
+          "range": "string",
+          "required": false,
+          "sql_column": "isdCode",
+          "co_required_with": "mobileNumber"
+        },
+        {
+          "name": "mobileNumber",
+          "range": "string",
+          "required": false,
+          "sql_column": "mobileNumber",
+          "co_required_with": "isdCode"
+        },
+        {
+          "name": "hasMobileVerificationStatus",
+          "range": "MobileVerificationStatus",
+          "required": false,
+          "owl_object_property": true,
+          "resolution_via": "username"
+        },
+        {
+          "name": "hasPartnerMappings",
+          "range": "PartnerMapping",
+          "required": false,
+          "owl_object_property": true,
+          "resolution_via": null
+        }
+      ],
+      "login_block_conditions": [
+        {
+          "property": "isLocked",
+          "condition": "value = 1"
+        },
+        {
+          "property": "isActive",
+          "condition": "value = 0"
+        }
+      ]
+    },
+    "PartnerMapping": {
+      "class": "PartnerMapping",
+      "datasource": "sqlserver",
+      "version": "1.0.0",
+      "table": "Um_Userpartnermapping",
+      "foreign_key": "userId → User.userId",
+      "properties": [
+        {
+          "name": "mappingId",
+          "range": "string",
+          "required": true,
+          "derived_from": "userId + bpc + partnerCode",
+          "derivation_rule": "f'{userId}_{bpc}_{partnerCode}'"
+        },
+        {
+          "name": "userId",
+          "range": "integer",
+          "required": true,
+          "sql_column": "userid",
+          "sql_type": "INT"
+        },
+        {
+          "name": "hasUser",
+          "range": "User",
+          "required": false,
+          "owl_object_property": true,
+          "resolution_via": "userId"
+        },
+        {
+          "name": "bpc",
+          "range": "string",
+          "required": true,
+          "sql_column": "bpc"
+        },
+        {
+          "name": "partnerCode",
+          "range": "string",
+          "required": true,
+          "sql_column": "partnercode"
+        },
+        {
+          "name": "mappingIsActive",
+          "range": "SqlBit",
+          "required": false,
+          "sql_column": "isactive",
+          "sql_type": "BIT",
+          "normalize_to_bool": true,
+          "login_block_condition": "no row with value = 1 for this userId"
+        },
+        {
+          "name": "isDefault",
+          "range": "SqlBit",
+          "required": false,
+          "sql_column": "isdefault",
+          "sql_type": "BIT",
+          "normalize_to_bool": true
+        }
+      ],
+      "login_block_conditions": [
+        {
+          "property": "mappingIsActive",
+          "condition": "no row with value = 1 for this userId"
+        }
+      ]
+    },
+    "MobileVerificationStatus": {
+      "class": "MobileVerificationStatus",
+      "datasource": "sqlserver",
+      "version": "1.0.0",
+      "table": "um_usermobileverificationstatus",
+      "foreign_key": "username → User.username",
+      "properties": [
+        {
+          "name": "username",
+          "range": "string",
+          "required": true,
+          "sql_column": "username",
+          "sql_type": "NVARCHAR",
+          "cross_source_link": "UserDocument.userName"
+        },
+        {
+          "name": "isMobileNumberVerifiedSQL",
+          "range": "SqlBit",
+          "required": true,
+          "sql_column": "ismobilenumberverified",
+          "sql_type": "BIT",
+          "normalize_to_bool": true,
+          "cross_source_check": "UserDocument.isMobileNumberVerifiedMongo",
+          "normalization": "BIT 0→false, 1→true"
+        }
+      ]
+    },
+    "UserDocument": {
+      "class": "UserDocument",
+      "datasource": "mongodb",
+      "version": "1.0.0",
+      "collection": "users",
+      "link_key": "userName",
+      "properties": [
+        {
+          "name": "userName",
+          "range": "string",
+          "required": true,
+          "mongo_field": "userName",
+          "cross_source_link": "User.username"
+        },
+        {
+          "name": "normalizedUserName",
+          "range": "string",
+          "required": false,
+          "mongo_field": "normalizedUserName",
+          "derived_from": "userName",
+          "derivation_rule": "lowercase(userName)"
+        },
+        {
+          "name": "mongoFirstName",
+          "range": "string",
+          "required": false,
+          "mongo_field": "firstName"
+        },
+        {
+          "name": "mongoLastName",
+          "range": "string",
+          "required": false,
+          "mongo_field": "lastName"
+        },
+        {
+          "name": "isMobileNumberVerifiedMongo",
+          "range": "boolean",
+          "required": false,
+          "mongo_field": "ismobileNumberVerified",
+          "cross_source_check": "MobileVerificationStatus.isMobileNumberVerifiedSQL",
+          "normalization": "Compare MongoDB true/false with SQL BIT 1/0 after normalization"
+        },
+        {
+          "name": "mongoAuthenticationType",
+          "range": "AuthenticationTypeEnum",
+          "required": false,
+          "mongo_field": "authenticationType",
+          "mongo_type": "INT",
+          "enum_integer_map": {
+            "1": "Password",
+            "2": "SSO"
+          }
+        },
+        {
+          "name": "mongoIsdCode",
+          "range": "string",
+          "required": false,
+          "mongo_field": "isdCode",
+          "co_required_with": "mobileNo"
+        },
+        {
+          "name": "mobileNo",
+          "range": "string",
+          "required": false,
+          "mongo_field": "mobileNo",
+          "co_required_with": "mongoIsdCode"
+        },
+        {
+          "name": "userPartnerMapping",
+          "range": "PartnerMapping",
+          "required": false,
+          "mongo_field": "userpartnermapping"
+        }
+      ]
+    }
+  }
+}

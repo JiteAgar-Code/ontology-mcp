@@ -1,0 +1,26 @@
+# ─────────────────────────────────────────────
+# Login Query Agent — Ontology MCP & KG
+# Python 3.12
+# ─────────────────────────────────────────────
+
+# Ontology & Schema
+linkml>=1.7.0            # LinkML schema language + generators (gen-owl, gen-shacl, gen-python)
+rdflib>=7.0.0            # RDF graph manipulation (Turtle serialisation, SPARQL, Graph API)
+pyshacl>=0.25.0          # SHACL validation — validates fetched data against shapes at runtime
+
+# MCP Server
+mcp>=2.0.0               # Anthropic MCP Python SDK (stdio transport, v2 installed)
+
+# Data Connectors
+pyodbc>=5.0.0            # SQL Server connector (requires ODBC Driver 18 installed separately)
+pymongo>=4.7.0           # MongoDB connector
+
+# Configuration
+pyyaml>=6.0.1            # YAML parsing (schema files, registry, settings)
+python-dotenv>=1.0.0     # Load secrets from .env file
+
+# Utilities
+pydantic>=2.6.0          # Data validation for MCP tool inputs/outputs
+click>=8.1.7             # CLI for generate.py and load_kg.py
+requests>=2.31.0         # New Relic API calls
+SPARQLWrapper>=2.0.0     # SPARQL HTTP client for Fuseki endpoint

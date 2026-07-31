@@ -1,0 +1,409 @@
+{
+  "@context": {
+    "@version": 1.1,
+    "gep": "https://gep.com/ontology/login#",
+    "xsd": "http://www.w3.org/2001/XMLSchema#",
+    "skos": "http://www.w3.org/2004/02/skos/core#",
+    "owl": "http://www.w3.org/2002/07/owl#",
+    "rdfs": "http://www.w3.org/2000/01/rdf-schema#",
+    "AbstractUser": {
+      "@id": "https://gep.com/ontology/login#AbstractUser",
+      "@type": "@id"
+    },
+    "User": {
+      "@id": "https://gep.com/ontology/login#User",
+      "@type": "@id"
+    },
+    "PartnerMapping": {
+      "@id": "https://gep.com/ontology/login#PartnerMapping",
+      "@type": "@id"
+    },
+    "MobileVerificationStatus": {
+      "@id": "https://gep.com/ontology/login#MobileVerificationStatus",
+      "@type": "@id"
+    },
+    "UserDocument": {
+      "@id": "https://gep.com/ontology/login#UserDocument",
+      "@type": "@id"
+    },
+    "hasUser": {
+      "@id": "https://gep.com/ontology/login#hasUser"
+    },
+    "hasPartnerMappings": {
+      "@id": "https://gep.com/ontology/login#hasPartnerMappings",
+      "@container": "@set"
+    },
+    "hasMobileVerificationStatus": {
+      "@id": "https://gep.com/ontology/login#hasMobileVerificationStatus"
+    },
+    "mappingId": {
+      "@id": "https://gep.com/ontology/login#mappingId",
+      "@type": "xsd:string"
+    },
+    "userId": {
+      "@id": "https://gep.com/ontology/login#userId",
+      "@type": "xsd:integer"
+    },
+    "username": {
+      "@id": "https://gep.com/ontology/login#username",
+      "@type": "xsd:string"
+    },
+    "emailAddress": {
+      "@id": "https://gep.com/ontology/login#emailAddress",
+      "@type": "xsd:string"
+    },
+    "firstName": {
+      "@id": "https://gep.com/ontology/login#firstName",
+      "@type": "xsd:string"
+    },
+    "lastName": {
+      "@id": "https://gep.com/ontology/login#lastName",
+      "@type": "xsd:string"
+    },
+    "authenticationType": {
+      "@id": "https://gep.com/ontology/login#authenticationType"
+    },
+    "isLocked": {
+      "@id": "https://gep.com/ontology/login#isLocked",
+      "@type": "xsd:integer"
+    },
+    "isActive": {
+      "@id": "https://gep.com/ontology/login#isActive",
+      "@type": "xsd:integer"
+    },
+    "isdCode": {
+      "@id": "https://gep.com/ontology/login#isdCode",
+      "@type": "xsd:string"
+    },
+    "mobileNumber": {
+      "@id": "https://gep.com/ontology/login#mobileNumber",
+      "@type": "xsd:string"
+    },
+    "bpc": {
+      "@id": "https://gep.com/ontology/login#bpc",
+      "@type": "xsd:string"
+    },
+    "partnerCode": {
+      "@id": "https://gep.com/ontology/login#partnerCode",
+      "@type": "xsd:string"
+    },
+    "mappingIsActive": {
+      "@id": "https://gep.com/ontology/login#mappingIsActive",
+      "@type": "xsd:integer"
+    },
+    "isDefault": {
+      "@id": "https://gep.com/ontology/login#isDefault",
+      "@type": "xsd:integer"
+    },
+    "isMobileNumberVerifiedSQL": {
+      "@id": "https://gep.com/ontology/login#isMobileNumberVerifiedSQL",
+      "@type": "xsd:integer"
+    },
+    "userName": {
+      "@id": "https://gep.com/ontology/login#userName",
+      "@type": "xsd:string"
+    },
+    "normalizedUserName": {
+      "@id": "https://gep.com/ontology/login#normalizedUserName",
+      "@type": "xsd:string"
+    },
+    "mongoFirstName": {
+      "@id": "https://gep.com/ontology/login#mongoFirstName",
+      "@type": "xsd:string"
+    },
+    "mongoLastName": {
+      "@id": "https://gep.com/ontology/login#mongoLastName",
+      "@type": "xsd:string"
+    },
+    "isMobileNumberVerifiedMongo": {
+      "@id": "https://gep.com/ontology/login#isMobileNumberVerifiedMongo",
+      "@type": "xsd:boolean"
+    },
+    "mongoAuthenticationType": {
+      "@id": "https://gep.com/ontology/login#mongoAuthenticationType"
+    },
+    "mongoIsdCode": {
+      "@id": "https://gep.com/ontology/login#mongoIsdCode",
+      "@type": "xsd:string"
+    },
+    "mobileNo": {
+      "@id": "https://gep.com/ontology/login#mobileNo",
+      "@type": "xsd:string"
+    },
+    "userPartnerMapping": {
+      "@id": "https://gep.com/ontology/login#userPartnerMapping",
+      "@container": "@set"
+    },
+    "AuthenticationTypeEnum": {
+      "@id": "https://gep.com/ontology/login#AuthenticationTypeEnum",
+      "@type": "@id"
+    },
+    "Password": {
+      "@id": "https://gep.com/ontology/login#Password"
+    },
+    "SSO": {
+      "@id": "https://gep.com/ontology/login#SSO"
+    }
+  },
+  "schema": "login",
+  "version": "1.0.0",
+  "intents": [
+    {
+      "@context": "./{schema}.context.jsonld",
+      "@type": "gep:IntentDescriptor",
+      "intent_id": "intent_diagnose_login_failure",
+      "intent_name": "DiagnoseLoginFailure",
+      "entities": [
+        {
+          "@type": "gep:User",
+          "datasource": "sqlserver",
+          "table": "UM_Users",
+          "collection": null,
+          "link_key": "username",
+          "properties": [
+            {
+              "name": "userId",
+              "required": true,
+              "range": "integer",
+              "sql_column": "userid"
+            },
+            {
+              "name": "username",
+              "required": true,
+              "range": "string",
+              "sql_column": "username"
+            },
+            {
+              "name": "emailAddress",
+              "required": true,
+              "range": "string",
+              "sql_column": "emailaddress"
+            },
+            {
+              "name": "firstName",
+              "required": false,
+              "range": "string",
+              "sql_column": "firstName"
+            },
+            {
+              "name": "lastName",
+              "required": false,
+              "range": "string",
+              "sql_column": "lastName"
+            },
+            {
+              "name": "authenticationType",
+              "required": true,
+              "range": "AuthenticationTypeEnum",
+              "sql_column": "authenticationtype",
+              "mongo_field": "authenticationType"
+            },
+            {
+              "name": "isLocked",
+              "required": false,
+              "range": "SqlBit",
+              "sql_column": "islocked",
+              "normalize_to_bool": true,
+              "login_block_condition": "value = 1"
+            },
+            {
+              "name": "isActive",
+              "required": false,
+              "range": "SqlBit",
+              "sql_column": "isactive",
+              "normalize_to_bool": true,
+              "login_block_condition": "value = 0"
+            },
+            {
+              "name": "isdCode",
+              "required": false,
+              "range": "string",
+              "sql_column": "isdCode"
+            },
+            {
+              "name": "mobileNumber",
+              "required": false,
+              "range": "string",
+              "sql_column": "mobileNumber"
+            },
+            {
+              "name": "hasMobileVerificationStatus",
+              "required": false,
+              "range": "MobileVerificationStatus"
+            },
+            {
+              "name": "hasPartnerMappings",
+              "required": false,
+              "range": "PartnerMapping"
+            }
+          ]
+        },
+        {
+          "@type": "gep:PartnerMapping",
+          "datasource": "sqlserver",
+          "table": "Um_Userpartnermapping",
+          "collection": null,
+          "link_key": null,
+          "properties": [
+            {
+              "name": "mappingId",
+              "required": true,
+              "range": "string"
+            },
+            {
+              "name": "userId",
+              "required": true,
+              "range": "integer",
+              "sql_column": "userid"
+            },
+            {
+              "name": "hasUser",
+              "required": false,
+              "range": "User"
+            },
+            {
+              "name": "bpc",
+              "required": true,
+              "range": "string",
+              "sql_column": "bpc"
+            },
+            {
+              "name": "partnerCode",
+              "required": true,
+              "range": "string",
+              "sql_column": "partnercode"
+            },
+            {
+              "name": "mappingIsActive",
+              "required": false,
+              "range": "SqlBit",
+              "sql_column": "isactive",
+              "normalize_to_bool": true,
+              "login_block_condition": "no row with value = 1 for this userId"
+            },
+            {
+              "name": "isDefault",
+              "required": false,
+              "range": "SqlBit",
+              "sql_column": "isdefault",
+              "normalize_to_bool": true
+            }
+          ]
+        },
+        {
+          "@type": "gep:MobileVerificationStatus",
+          "datasource": "sqlserver",
+          "table": "um_usermobileverificationstatus",
+          "collection": null,
+          "link_key": null,
+          "properties": [
+            {
+              "name": "username",
+              "required": true,
+              "range": "string",
+              "sql_column": "username"
+            },
+            {
+              "name": "isMobileNumberVerifiedSQL",
+              "required": true,
+              "range": "SqlBit",
+              "sql_column": "ismobilenumberverified",
+              "normalize_to_bool": true
+            }
+          ]
+        },
+        {
+          "@type": "gep:UserDocument",
+          "datasource": "mongodb",
+          "table": null,
+          "collection": "users",
+          "link_key": "userName",
+          "properties": [
+            {
+              "name": "userName",
+              "required": true,
+              "range": "string",
+              "mongo_field": "userName"
+            },
+            {
+              "name": "normalizedUserName",
+              "required": false,
+              "range": "string",
+              "mongo_field": "normalizedUserName"
+            },
+            {
+              "name": "mongoFirstName",
+              "required": false,
+              "range": "string",
+              "mongo_field": "firstName"
+            },
+            {
+              "name": "mongoLastName",
+              "required": false,
+              "range": "string",
+              "mongo_field": "lastName"
+            },
+            {
+              "name": "isMobileNumberVerifiedMongo",
+              "required": false,
+              "range": "boolean",
+              "mongo_field": "ismobileNumberVerified"
+            },
+            {
+              "name": "mongoAuthenticationType",
+              "required": false,
+              "range": "AuthenticationTypeEnum",
+              "mongo_field": "authenticationType"
+            },
+            {
+              "name": "mongoIsdCode",
+              "required": false,
+              "range": "string",
+              "mongo_field": "isdCode"
+            },
+            {
+              "name": "mobileNo",
+              "required": false,
+              "range": "string",
+              "mongo_field": "mobileNo"
+            },
+            {
+              "name": "userPartnerMapping",
+              "required": false,
+              "range": "PartnerMapping",
+              "mongo_field": "userpartnermapping"
+            }
+          ]
+        }
+      ],
+      "validation_sequence": [
+        {
+          "@id": "gep:LoginBlockShape"
+        },
+        {
+          "@id": "gep:PartnerMappingShape"
+        },
+        {
+          "@id": "gep:DefaultPartnerShape"
+        },
+        {
+          "@id": "gep:MobileConsistencyShape"
+        }
+      ],
+      "decision_rules": [
+        {
+          "@id": "gep:dr_001"
+        },
+        {
+          "@id": "gep:dr_002"
+        },
+        {
+          "@id": "gep:dr_003"
+        },
+        {
+          "@id": "gep:dr_004"
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,75 @@
+@prefix gep: <https://gep.com/ontology/login#> .
+@prefix owl: <http://www.w3.org/2002/07/owl#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+
+gep:action a owl:DatatypeProperty ;
+    rdfs:label "Action"@en ;
+    rdfs:range xsd:string .
+
+gep:dr_001 a owl:NamedIndividual,
+        gep:DecisionRule ;
+    rdfs:label "EscalateToNewRelic"@en ;
+    rdfs:comment "When all SHACL shapes pass (user data looks correct in both SQL and MongoDB), escalate to New Relic to find a runtime or infrastructure root cause."@en ;
+    gep:action "query_newrelic"^^xsd:string ;
+    gep:nrqlTemplate "SELECT * FROM Log WHERE username = '{username}' SINCE 1 hour ago"^^xsd:string ;
+    gep:rulePriority 1 ;
+    gep:triggerType "ALL_SHAPES_PASS"^^xsd:string .
+
+gep:dr_002 a owl:NamedIndividual,
+        gep:DecisionRule ;
+    rdfs:label "ReportMobileVerificationMismatch"@en ;
+    rdfs:comment "When SQL ismobilenumberverified and MongoDB ismobileNumberVerified diverge, report the data sync issue directly. Do not escalate to New Relic."@en ;
+    gep:action "report_mismatch"^^xsd:string ;
+    gep:involvedField gep:isMobileNumberVerifiedMongo,
+        gep:isMobileNumberVerifiedSQL ;
+    gep:messageTemplate "Data sync issue for user '{username}': SQL isMobileNumberVerified={sql_value}, MongoDB ismobileNumberVerified={mongo_value}."^^xsd:string ;
+    gep:rulePriority 2 ;
+    gep:triggerType "CROSS_SOURCE_MISMATCH"^^xsd:string .
+
+gep:dr_003 a owl:NamedIndividual,
+        gep:DecisionRule ;
+    rdfs:label "ReportLoginBlocked"@en ;
+    rdfs:comment "When LoginBlockShape fails (account locked or deactivated), report the specific reason. Do not escalate to New Relic."@en ;
+    gep:action "report_block_reason"^^xsd:string ;
+    gep:messageTemplate "Login blocked for '{username}': {violation_message}"^^xsd:string ;
+    gep:rulePriority 3 ;
+    gep:targetShape gep:LoginBlockShape ;
+    gep:triggerType "SHAPE_VIOLATION"^^xsd:string .
+
+gep:dr_004 a owl:NamedIndividual,
+        gep:DecisionRule ;
+    rdfs:label "ReportNoActivePartnerMapping"@en ;
+    rdfs:comment "When PartnerMappingShape fails (no active partner mapping row exists), report missing partner mapping. Do not escalate to New Relic."@en ;
+    gep:action "report_block_reason"^^xsd:string ;
+    gep:messageTemplate "Login blocked for '{username}': No active partner mapping found."^^xsd:string ;
+    gep:rulePriority 4 ;
+    gep:targetShape gep:PartnerMappingShape ;
+    gep:triggerType "SHAPE_VIOLATION"^^xsd:string .
+
+gep:involvedField a owl:ObjectProperty ;
+    rdfs:label "Involved Field"@en .
+
+gep:messageTemplate a owl:DatatypeProperty ;
+    rdfs:label "Message Template"@en ;
+    rdfs:range xsd:string .
+
+gep:nrqlTemplate a owl:DatatypeProperty ;
+    rdfs:label "NRQL Template"@en ;
+    rdfs:range xsd:string .
+
+gep:rulePriority a owl:DatatypeProperty ;
+    rdfs:label "Rule Priority"@en ;
+    rdfs:range xsd:integer .
+
+gep:targetShape a owl:ObjectProperty ;
+    rdfs:label "Target Shape"@en .
+
+gep:triggerType a owl:DatatypeProperty ;
+    rdfs:label "Trigger Type"@en ;
+    rdfs:range xsd:string .
+
+gep:DecisionRule a owl:Class ;
+    rdfs:label "Decision Rule"@en ;
+    rdfs:comment "A rule that determines what action to take based on SHACL validation results."@en .
+

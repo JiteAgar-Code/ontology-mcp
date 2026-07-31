@@ -1,0 +1,167 @@
+@prefix gep: <https://gep.com/ontology/login#> .
+@prefix skos: <http://www.w3.org/2004/02/skos/core#> .
+
+gep:AuthenticationTypeEnum a skos:Concept ;
+    skos:definition "Enumeration of allowed authentication mechanisms"@en ;
+    skos:inScheme gep:LoginConceptScheme ;
+    skos:prefLabel "Authentication Type"@en .
+
+gep:MobileVerificationStatus a skos:Concept ;
+    skos:definition "SQL record of whether a user's mobile number has been verified"@en ;
+    skos:inScheme gep:LoginConceptScheme ;
+    skos:prefLabel "Mobile Verification Status (SQL)"@en .
+
+gep:PartnerMapping a skos:Concept ;
+    skos:definition "Maps a user to one or more BPC and partner codes"@en ;
+    skos:inScheme gep:LoginConceptScheme ;
+    skos:prefLabel "Partner Mapping"@en .
+
+gep:authenticationType a skos:Concept ;
+    skos:inScheme gep:LoginConceptScheme ;
+    skos:prefLabel "Authentication Type"@en .
+
+gep:emailAddress a skos:Concept ;
+    skos:inScheme gep:LoginConceptScheme ;
+    skos:prefLabel "Email Address"@en .
+
+gep:firstName a skos:Concept ;
+    skos:inScheme gep:LoginConceptScheme ;
+    skos:prefLabel "First Name"@en .
+
+gep:hasMobileVerificationStatus a skos:Concept ;
+    skos:definition "Links a User to their mobile number verification record"@en ;
+    skos:inScheme gep:LoginConceptScheme ;
+    skos:prefLabel "Has Mobile Verification Status"@en .
+
+gep:hasPartnerMappings a skos:Concept ;
+    skos:definition "Links a User to all their partner mapping records"@en ;
+    skos:inScheme gep:LoginConceptScheme ;
+    skos:prefLabel "Has Partner Mappings"@en .
+
+gep:hasUser a skos:Concept ;
+    skos:definition "Links a PartnerMapping record to the User it belongs to"@en ;
+    skos:inScheme gep:LoginConceptScheme ;
+    skos:prefLabel "Has User"@en .
+
+gep:isActive a skos:Concept ;
+    skos:inScheme gep:LoginConceptScheme ;
+    skos:prefLabel "Is Active"@en .
+
+gep:isDefault a skos:Concept ;
+    skos:inScheme gep:LoginConceptScheme ;
+    skos:note "Business rule: exactly one isDefault=1 per userId. Multiple rows = data integrity bug."@en ;
+    skos:prefLabel "Is Default Mapping"@en .
+
+gep:isLocked a skos:Concept ;
+    skos:inScheme gep:LoginConceptScheme ;
+    skos:prefLabel "Is Locked"@en .
+
+gep:isMobileNumberVerifiedMongo a skos:Concept ;
+    skos:inScheme gep:LoginConceptScheme ;
+    skos:prefLabel "Is Mobile Verified (MongoDB)"@en .
+
+gep:isMobileNumberVerifiedSQL a skos:Concept ;
+    skos:inScheme gep:LoginConceptScheme ;
+    skos:prefLabel "Is Mobile Verified (SQL)"@en .
+
+gep:isdCode a skos:Concept ;
+    skos:inScheme gep:LoginConceptScheme ;
+    skos:prefLabel "ISD Code"@en .
+
+gep:lastName a skos:Concept ;
+    skos:inScheme gep:LoginConceptScheme ;
+    skos:prefLabel "Last Name"@en .
+
+gep:mappingId a skos:Concept ;
+    skos:inScheme gep:LoginConceptScheme ;
+    skos:prefLabel "Mapping ID"@en .
+
+gep:mappingIsActive a skos:Concept ;
+    skos:inScheme gep:LoginConceptScheme ;
+    skos:prefLabel "Mapping Is Active"@en .
+
+gep:mobileNo a skos:Concept ;
+    skos:inScheme gep:LoginConceptScheme ;
+    skos:prefLabel "Mobile No (MongoDB)"@en .
+
+gep:mobileNumber a skos:Concept ;
+    skos:inScheme gep:LoginConceptScheme ;
+    skos:prefLabel "Mobile Number (SQL)"@en .
+
+gep:mongoAuthenticationType a skos:Concept ;
+    skos:inScheme gep:LoginConceptScheme ;
+    skos:prefLabel "Authentication Type (MongoDB)"@en .
+
+gep:mongoFirstName a skos:Concept ;
+    skos:inScheme gep:LoginConceptScheme ;
+    skos:prefLabel "First Name (MongoDB)"@en .
+
+gep:mongoIsdCode a skos:Concept ;
+    skos:inScheme gep:LoginConceptScheme ;
+    skos:prefLabel "ISD Code (MongoDB)"@en .
+
+gep:mongoLastName a skos:Concept ;
+    skos:inScheme gep:LoginConceptScheme ;
+    skos:prefLabel "Last Name (MongoDB)"@en .
+
+gep:normalizedUserName a skos:Concept ;
+    skos:inScheme gep:LoginConceptScheme ;
+    skos:note "Derived field. Rule: lowercase(userName). Not authored — always computed."@en ;
+    skos:prefLabel "Normalized Username"@en .
+
+gep:userId a skos:Concept ;
+    skos:definition "Unique numeric identifier for a user record in SQL Server"@en ;
+    skos:inScheme gep:LoginConceptScheme ;
+    skos:prefLabel "User ID"@en .
+
+gep:userName a skos:Concept ;
+    skos:inScheme gep:LoginConceptScheme ;
+    skos:prefLabel "Username (MongoDB)"@en .
+
+gep:userPartnerMapping a skos:Concept ;
+    skos:inScheme gep:LoginConceptScheme ;
+    skos:prefLabel "User Partner Mapping (MongoDB)"@en .
+
+gep:username a skos:Concept ;
+    skos:inScheme gep:LoginConceptScheme ;
+    skos:note "Case-insensitive. Matches MongoDB userName and normalizedUserName"@en ;
+    skos:prefLabel "Username"@en .
+
+gep:User a skos:Concept ;
+    skos:broader gep:AbstractUser ;
+    skos:definition "User record sourced from SQL Server UM_Users table"@en ;
+    skos:inScheme gep:LoginConceptScheme ;
+    skos:prefLabel "SQL User"@en .
+
+gep:UserDocument a skos:Concept ;
+    skos:broader gep:AbstractUser ;
+    skos:definition "User document sourced from MongoDB users collection"@en ;
+    skos:inScheme gep:LoginConceptScheme ;
+    skos:prefLabel "MongoDB User Document"@en .
+
+gep:bpc a skos:Concept ;
+    skos:definition "Higher-level partner grouping. partnerCode is a child of this value."@en ;
+    skos:inScheme gep:LoginConceptScheme ;
+    skos:narrower gep:partnerCode ;
+    skos:prefLabel "BPC"@en .
+
+gep:partnerCode a skos:Concept ;
+    skos:broader gep:bpc ;
+    skos:definition "Specific partner identifier under a BPC group"@en ;
+    skos:inScheme gep:LoginConceptScheme ;
+    skos:note "BPC is the parent grouping code. partnerCode is a child code under BPC."@en ;
+    skos:prefLabel "Partner Code"@en .
+
+gep:AbstractUser a skos:Concept ;
+    skos:definition "A person who has an account in the system"@en ;
+    skos:inScheme gep:LoginConceptScheme ;
+    skos:narrower gep:User,
+        gep:UserDocument ;
+    skos:prefLabel "User"@en ;
+    skos:topConceptOf gep:LoginConceptScheme .
+
+gep:LoginConceptScheme a skos:ConceptScheme ;
+    skos:definition "SKOS concept scheme for the Login Query Agent domain ontology"@en ;
+    skos:hasTopConcept gep:AbstractUser ;
+    skos:prefLabel "Login Query Agent Concepts"@en .
+

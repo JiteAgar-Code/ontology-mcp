@@ -1,0 +1,28 @@
+# =============================================================
+# settings.yaml — non-secret runtime configuration
+# Secret values (passwords, API keys) belong in .env only.
+# =============================================================
+
+agent:
+  default_schema: login
+  max_intent_patterns: 20           # max KG text patterns to evaluate per call
+  descriptor_cache_ttl_seconds: 300 # how long the active-graph URI cache lives
+
+fuseki:
+  url: "${FUSEKI_URL}"              # resolved from .env at runtime
+  dataset_suffix: "-kg"             # login → login-kg
+  query_timeout_seconds: 15
+  retry_attempts: 2
+
+validation:
+  shacl_engine: pyshacl             # pyshacl (pure Python) or topquadrant
+  stop_on_first_failure: false      # true = bail out early, false = collect all violations
+
+new_relic:
+  region: "${NEW_RELIC_REGION}"     # resolved from .env at runtime
+  default_lookback: "1 hour ago"
+  max_results: 100
+
+logging:
+  level: INFO                       # DEBUG / INFO / WARNING / ERROR
+  format: "%(asctime)s [%(name)s] %(levelname)s — %(message)s"
