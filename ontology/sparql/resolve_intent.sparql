@@ -1,0 +1,71 @@
+# resolve_intent.sparql
+#
+# PURPOSE: Match a user's natural language prompt to a known intent pattern,
+#          then return every entity involved, its physical descriptor,
+#          all linked decision rules, and validation shapes.
+#
+# This is the primary query the MCP fires when it receives a user prompt.
+# The result set is assembled into a JSON-LD descriptor and returned to the agent.
+#
+# PLACEHOLDERS — Python str.replace() substitution before sending to Fuseki:
+#   __INTENTS_GRAPH__      e.g. urn:kg:login:v1.0.0:intents
+#   __DESCRIPTORS_GRAPH__  e.g. urn:kg:login:v1.0.0:descriptors
+#   __RULES_GRAPH__        e.g. urn:kg:login:v1.0.0:rules
+#   __INTENT_TEXT__        user prompt fragment, lowercased (e.g. "cannot login")
+#
+# IMPORTANT: __INTENT_TEXT__ must be sanitised — strip single quotes and SPARQL
+# injection characters — before substitution (done in sparql_client.py).
+
+PREFIX gep:  <https://gep.com/ontology/login#>
+PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+PREFIX xsd:  <http://www.w3.org/2001/XMLSchema#>
+
+SELECT DISTINCT
+    ?intent
+    ?intentName
+    ?textPattern
+    ?entity
+    ?entityDatasource
+    ?entityTable
+    ?entityCollection
+    ?entityLinkKey
+    ?ruleId
+    ?triggerType
+    ?action
+    ?rulePriority
+    ?nrqlTemplate
+    ?messageTemplate
+    ?shapeId
+WHERE {
+
+    # ── Intent + text matching ────────────────────────────────────
+    GRAPH <__INTENTS_GRAPH__> {
+        ?intent a gep:Intent ;
+                gep:intentName ?intentName ;
+                gep:textPattern ?textPattern ;
+                gep:involvesEntity ?entity .
+        FILTER(CONTAINS(LCASE(STR(?textPattern)), LCASE("__INTENT_TEXT__")))
+        OPTIONAL { ?intent gep:hasDecisionRule    ?ruleId  }
+        OPTIONAL { ?intent gep:hasValidationShape ?shapeId }
+    }
+
+    # ── Physical descriptor for each entity ──────────────────────
+    GRAPH <__DESCRIPTORS_GRAPH__> {
+        ?entity gep:datasource ?entityDatasource .
+        OPTIONAL { ?entity gep:tableName      ?entityTable      }
+        OPTIONAL { ?entity gep:collectionName ?entityCollection }
+        OPTIONAL { ?entity gep:linkKey        ?entityLinkKey    }
+    }
+
+    # ── Decision rule details ─────────────────────────────────────
+    OPTIONAL {
+        GRAPH <__RULES_GRAPH__> {
+            ?ruleId gep:triggerType   ?triggerType ;
+                    gep:action        ?action ;
+                    gep:rulePriority  ?rulePriority .
+            OPTIONAL { ?ruleId gep:nrqlTemplate    ?nrqlTemplate    }
+            OPTIONAL { ?ruleId gep:messageTemplate ?messageTemplate }
+        }
+    }
+}
+ORDER BY ?rulePriority ?intentName

@@ -1,0 +1,59 @@
+# get_entity_descriptor.sparql
+#
+# PURPOSE: Return the complete physical descriptor for a single entity class —
+#          datasource, table/collection, link key, and all property mappings.
+#
+# Used by the MCP's get_entity_descriptor tool.
+# Also used internally to assemble the full descriptor in resolve_intent.
+#
+# PLACEHOLDERS:
+#   __DESCRIPTORS_GRAPH__  e.g. urn:kg:login:v1.0.0:descriptors
+#   __ENTITY_IRI__         full IRI, e.g. https://gep.com/ontology/login#User
+
+PREFIX gep: <https://gep.com/ontology/login#>
+PREFIX xsd: <http://www.w3.org/2001/XMLSchema#>
+
+SELECT
+    ?datasource
+    ?tableName
+    ?collectionName
+    ?linkKey
+    ?primaryKey
+    ?foreignKey
+    ?propName
+    ?sqlColumn
+    ?mongoField
+    ?sqlType
+    ?required
+    ?normalizeToBool
+    ?loginBlockCondition
+    ?crossSourceLink
+    ?crossSourceCheck
+WHERE {
+    GRAPH <__DESCRIPTORS_GRAPH__> {
+
+        # ── Entity-level attributes ───────────────────────────────
+        <__ENTITY_IRI__> a gep:EntityDescriptor ;
+                         gep:datasource ?datasource .
+        OPTIONAL { <__ENTITY_IRI__> gep:tableName      ?tableName      }
+        OPTIONAL { <__ENTITY_IRI__> gep:collectionName ?collectionName }
+        OPTIONAL { <__ENTITY_IRI__> gep:linkKey        ?linkKey        }
+        OPTIONAL { <__ENTITY_IRI__> gep:primaryKey     ?primaryKey     }
+        OPTIONAL { <__ENTITY_IRI__> gep:foreignKey     ?foreignKey     }
+
+        # ── Per-property mappings ─────────────────────────────────
+        OPTIONAL {
+            <__ENTITY_IRI__> gep:hasProperty ?prop .
+            ?prop gep:propertyName ?propName .
+            OPTIONAL { ?prop gep:sqlColumn           ?sqlColumn           }
+            OPTIONAL { ?prop gep:mongoField          ?mongoField          }
+            OPTIONAL { ?prop gep:sqlType             ?sqlType             }
+            OPTIONAL { ?prop gep:required            ?required            }
+            OPTIONAL { ?prop gep:normalizeToBool     ?normalizeToBool     }
+            OPTIONAL { ?prop gep:loginBlockCondition ?loginBlockCondition }
+            OPTIONAL { ?prop gep:crossSourceLink     ?crossSourceLink     }
+            OPTIONAL { ?prop gep:crossSourceCheck    ?crossSourceCheck    }
+        }
+    }
+}
+ORDER BY ?propName

@@ -1,0 +1,865 @@
+# =============================================================
+# Login Query Agent — Domain Ontology
+# Schema:    schemas/login/v1.0.0/login.yaml
+# Version:   1.0.0
+# Standards: LinkML 1.7 · OWL 2 DL · SHACL 1.0 · SKOS
+#
+# NOTE: Annotation keys prefixed with "skos:" (e.g. skos:prefLabel)
+# are treated as plain string keys by standard LinkML generators.
+# They do NOT produce SKOS triples via gen-owl or gen-rdf.
+# Our custom gen_skos.py pipeline reads these keys and generates
+# proper skos:prefLabel / skos:definition triples.
+# Do not remove the "skos:" prefix — gen_skos.py depends on it.
+# =============================================================
+
+id: https://gep.com/ontology/login#
+name: login
+title: Login Query Agent Ontology
+version: "1.0.0"
+metamodel_version: "1.7.0"
+description: >-
+  Domain ontology for the Login Query Agent. Models user identity,
+  partner mapping, and mobile verification across SQL Server and MongoDB.
+  Drives datasource routing, SHACL validation, and New Relic escalation rules.
+
+prefixes:
+  linkml: "https://w3id.org/linkml/"
+  gep:    "https://gep.com/ontology/login#"
+  xsd:    "http://www.w3.org/2001/XMLSchema#"
+  skos:   "http://www.w3.org/2004/02/skos/core#"
+  sh:     "http://www.w3.org/ns/shacl#"
+  owl:    "http://www.w3.org/2002/07/owl#"
+  rdfs:   "http://www.w3.org/2000/01/rdf-schema#"
+
+default_prefix: gep
+default_range: string
+
+imports:
+  - linkml:types
+
+
+# ─────────────────────────────────────────────────────────────
+# CUSTOM TYPES
+# FIX 1: min/max removed from type — not valid on LinkML types.
+#         Added typeof: integer. min/max enforced at each slot.
+# ─────────────────────────────────────────────────────────────
+types:
+
+  SqlBit:
+    typeof: integer
+    uri: xsd:integer
+    description: >-
+      SQL Server BIT — 0 or 1. Normalize to boolean
+      for cross-source comparison with MongoDB.
+    annotations:
+      note: "Normalize: 0→false, 1→true before comparing with MongoDB boolean."
+      sql_type: BIT
+      logical_type: boolean
+
+
+# ─────────────────────────────────────────────────────────────
+# ENUMERATIONS
+# ─────────────────────────────────────────────────────────────
+enums:
+
+  AuthenticationTypeEnum:
+    description: "Authentication mechanism for login. Stored as integer in both SQL and MongoDB."
+    annotations:
+      skos:prefLabel: "Authentication Type"
+      skos:definition: "Enumeration of allowed authentication mechanisms for user login."
+      storage_type: integer
+    permissible_values:
+      Password:
+        description: "Standard username and password authentication"
+        annotations:
+          integer_value: "1"
+          skos:prefLabel: "Password"
+      SSO:
+        description: "Single Sign-On via SAML/OAuth/OIDC"
+        annotations:
+          integer_value: "2"
+          skos:prefLabel: "Single Sign-On"
+
+
+# ─────────────────────────────────────────────────────────────
+# SUBSETS
+# ─────────────────────────────────────────────────────────────
+subsets:
+
+  SqlServerEntities:
+    description: "Entities and properties sourced from SQL Server"
+
+  MongoDBEntities:
+    description: "Entities and properties sourced from MongoDB"
+
+  LoginDiagnostics:
+    description: "Properties directly relevant to diagnosing login failures"
+
+  CrossSourceCheck:
+    description: "Properties that must be compared across SQL and MongoDB"
+
+  OWLObjectProperties:
+    description: "Slots that generate OWL ObjectProperty — semantic relationships between classes"
+
+
+# ─────────────────────────────────────────────────────────────
+# CLASSES
+# ─────────────────────────────────────────────────────────────
+classes:
+
+  # ── Abstract base (OWL superclass) ────────────────────────
+  AbstractUser:
+    abstract: true
+    description: "Abstract base concept — a user account in the system"
+    annotations:
+      skos:prefLabel: "User"
+      skos:definition: "A person who has an account in the system"
+
+  # ── SQL Entity 1: UM_Users ────────────────────────────────
+  User:
+    is_a: AbstractUser
+    in_subset:
+      - SqlServerEntities
+      - LoginDiagnostics
+    description: "Core user record from SQL Server UM_Users table"
+    annotations:
+      skos:prefLabel: "SQL User"
+      skos:note: >-
+        isLocked=1 OR isActive=0 blocks login.
+        username is the cross-source link key to MongoDB users.userName.
+      datasource: sqlserver
+      table: UM_Users
+      primary_key: userId
+      link_key: username
+    slots:
+      - userId
+      - username
+      - emailAddress
+      - firstName
+      - lastName
+      - authenticationType
+      - isLocked
+      - isActive
+      - isdCode
+      - mobileNumber
+      - hasMobileVerificationStatus
+      - hasPartnerMappings              # FIX 4c: added inverse ObjectProperty
+    slot_usage:
+      userId:
+        identifier: true               # FIX 2: identifier scoped to User only
+    rules:
+      - title: isdCode_requires_mobileNumber
+        description: "If isdCode is present, mobileNumber must also be present"
+        preconditions:
+          slot_conditions:
+            isdCode:
+              value_presence: PRESENT
+        postconditions:
+          slot_conditions:
+            mobileNumber:
+              value_presence: PRESENT
+      - title: mobileNumber_requires_isdCode
+        description: "If mobileNumber is present, isdCode must also be present"
+        preconditions:
+          slot_conditions:
+            mobileNumber:
+              value_presence: PRESENT
+        postconditions:
+          slot_conditions:
+            isdCode:
+              value_presence: PRESENT
+
+  # ── SQL Entity 2: Um_Userpartnermapping ──────────────────
+  PartnerMapping:
+    in_subset:
+      - SqlServerEntities
+      - LoginDiagnostics
+    description: "Maps a user to BPC/partner codes — SQL Server Um_Userpartnermapping"
+    annotations:
+      skos:prefLabel: "Partner Mapping"
+      skos:note: >-
+        BPC is parent grouping; partnerCode is child under BPC.
+        Exactly one row per user must have isDefault=1.
+        At least one row with mappingIsActive=1 is required for login.
+      datasource: sqlserver
+      table: Um_Userpartnermapping
+      foreign_key: "userId → User.userId"
+    slots:
+      - mappingId          # FIX 7: synthetic composite identifier
+      - userId
+      - hasUser
+      - bpc
+      - partnerCode
+      - mappingIsActive
+      - isDefault
+    slot_usage:
+      mappingId:
+        identifier: true   # FIX 7: PartnerMapping now has an identifier
+
+  # ── SQL Entity 3: um_usermobileverificationstatus ────────
+  MobileVerificationStatus:
+    in_subset:
+      - SqlServerEntities
+      - LoginDiagnostics
+      - CrossSourceCheck
+    description: "SQL-side mobile verification record — um_usermobileverificationstatus"
+    annotations:
+      skos:prefLabel: "Mobile Verification Status (SQL)"
+      skos:note: >-
+        Cross-checked against MongoDB UserDocument.isMobileNumberVerifiedMongo.
+        A mismatch between the two is reported as a data sync issue.
+      datasource: sqlserver
+      table: um_usermobileverificationstatus
+      foreign_key: "username → User.username"
+    slots:
+      - username
+      - isMobileNumberVerifiedSQL
+    slot_usage:
+      username:
+        # FIX 3: removed identifier: false (not valid LinkML). username is not
+        # marked identifier at global level so no override is needed here.
+        annotations:
+          note: "Foreign key reference to User.username. Not an identifier in this class."
+
+  # ── MongoDB Entity: users collection ─────────────────────
+  UserDocument:
+    is_a: AbstractUser
+    in_subset:
+      - MongoDBEntities
+      - LoginDiagnostics
+    description: "User document from MongoDB users collection"
+    annotations:
+      skos:prefLabel: "MongoDB User Document"
+      skos:note: >-
+        Embeds userPartnerMapping array mirroring SQL Um_Userpartnermapping.
+        isMobileNumberVerifiedMongo cross-checked with SQL isMobileNumberVerifiedSQL.
+      datasource: mongodb
+      collection: users
+      link_key: userName
+    slots:
+      - userName
+      - normalizedUserName
+      - mongoFirstName
+      - mongoLastName
+      - isMobileNumberVerifiedMongo
+      - mongoAuthenticationType
+      - mongoIsdCode
+      - mobileNo
+      - userPartnerMapping
+    rules:
+      - title: mongoIsdCode_requires_mobileNo
+        description: "If mongoIsdCode is present, mobileNo must also be present"
+        preconditions:
+          slot_conditions:
+            mongoIsdCode:
+              value_presence: PRESENT
+        postconditions:
+          slot_conditions:
+            mobileNo:
+              value_presence: PRESENT
+      - title: mobileNo_requires_mongoIsdCode
+        description: "If mobileNo is present, mongoIsdCode must also be present"
+        preconditions:
+          slot_conditions:
+            mobileNo:
+              value_presence: PRESENT
+        postconditions:
+          slot_conditions:
+            mongoIsdCode:
+              value_presence: PRESENT
+
+
+# ─────────────────────────────────────────────────────────────
+# SLOTS
+# ─────────────────────────────────────────────────────────────
+slots:
+
+  # ── OWL Object Properties ─────────────────────────────────
+
+  # FIX 4: inverse: keyword used instead of owl:inverseOf annotation
+  hasUser:
+    range: User
+    required: false
+    inverse: hasPartnerMappings
+    in_subset:
+      - OWLObjectProperties
+    description: >-
+      OWL ObjectProperty — semantic link from PartnerMapping to its owning User.
+      In SQL, resolved via the integer userId FK. Not stored as a URI in the database;
+      used by OWL reasoners and the KG to traverse the relationship.
+    annotations:
+      skos:prefLabel: "Has User"
+      skos:definition: "Links a PartnerMapping record to the User it belongs to"
+      resolution_via: userId
+
+  # FIX 4b: new slot — inverse of hasUser
+  hasPartnerMappings:
+    range: PartnerMapping
+    multivalued: true
+    required: false
+    inverse: hasUser
+    in_subset:
+      - OWLObjectProperties
+    description: >-
+      OWL ObjectProperty — inverse of hasUser. Links a User to their
+      PartnerMapping records. Used for KG traversal.
+    annotations:
+      skos:prefLabel: "Has Partner Mappings"
+      skos:definition: "Links a User to all their partner mapping records"
+
+  hasMobileVerificationStatus:
+    range: MobileVerificationStatus
+    required: false
+    in_subset:
+      - OWLObjectProperties
+    description: >-
+      OWL ObjectProperty — semantic link from User to their MobileVerificationStatus.
+      In SQL, resolved via the username FK. Used for OWL reasoning and KG traversal.
+    annotations:
+      skos:prefLabel: "Has Mobile Verification Status"
+      skos:definition: "Links a User to their mobile number verification record"
+      resolution_via: username
+
+  # ── FIX 7: PartnerMapping composite identifier ────────────
+  mappingId:
+    range: string
+    required: true
+    description: >-
+      Synthetic composite key for PartnerMapping.
+      Generated as '{userId}_{bpc}_{partnerCode}'.
+      Required because LinkML does not support composite identifiers natively.
+    annotations:
+      skos:prefLabel: "Mapping ID"
+      derived_from: "userId + bpc + partnerCode"
+      derivation_rule: "f'{userId}_{bpc}_{partnerCode}'"
+
+  # ── User (SQL) ─────────────────────────────────────────────
+
+  userId:
+    range: integer
+    required: true
+    # identifier: true defined via slot_usage in User class only (FIX 2)
+    in_subset:
+      - LoginDiagnostics
+    description: "Auto-increment integer primary key in SQL Server UM_Users"
+    annotations:
+      skos:prefLabel: "User ID"
+      skos:definition: "Unique numeric identifier for a user record in SQL Server"
+      sql_column: userid
+      sql_type: INT
+
+  username:
+    range: string
+    required: true
+    in_subset:
+      - LoginDiagnostics
+      - CrossSourceCheck
+    description: "Unique username. Primary cross-source link key to MongoDB users.userName"
+    annotations:
+      skos:prefLabel: "Username"
+      skos:note: "Case-insensitive. Matches MongoDB userName and normalizedUserName"
+      sql_column: username
+      sql_type: NVARCHAR
+      cross_source_link: "UserDocument.userName"
+
+  emailAddress:
+    range: string
+    required: true
+    pattern: "^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$"
+    description: "User email address"
+    annotations:
+      skos:prefLabel: "Email Address"
+      sql_column: emailaddress
+      sql_type: NVARCHAR
+
+  firstName:
+    range: string
+    required: false
+    description: "User first name (SQL)"
+    annotations:
+      skos:prefLabel: "First Name"
+      sql_column: firstName
+      sql_type: NVARCHAR
+
+  lastName:
+    range: string
+    required: false
+    description: "User last name (SQL)"
+    annotations:
+      skos:prefLabel: "Last Name"
+      sql_column: lastName
+      sql_type: NVARCHAR
+
+  authenticationType:
+    range: AuthenticationTypeEnum
+    required: true
+    in_subset:
+      - LoginDiagnostics
+    description: >-
+      Authentication mechanism. Integer in both SQL and MongoDB.
+      Validate: allowed values are 1 (Password) or 2 (SSO).
+    annotations:
+      skos:prefLabel: "Authentication Type"
+      sql_column: authenticationtype
+      sql_type: INT
+      mongo_field: authenticationType
+      mongo_type: INT
+
+  # FIX 1: minimum_value/maximum_value moved from type to slot
+  isLocked:
+    range: SqlBit
+    required: false
+    minimum_value: 0
+    maximum_value: 1
+    in_subset:
+      - LoginDiagnostics
+    description: "SQL BIT — 1 means account is locked. Login is blocked when value = 1"
+    annotations:
+      skos:prefLabel: "Is Locked"
+      sql_column: islocked
+      sql_type: BIT
+      login_block_condition: "value = 1"
+
+  isActive:
+    range: SqlBit
+    required: false
+    minimum_value: 0
+    maximum_value: 1
+    in_subset:
+      - LoginDiagnostics
+    description: "SQL BIT — 0 means account is deactivated. Login is blocked when value = 0"
+    annotations:
+      skos:prefLabel: "Is Active"
+      sql_column: isactive
+      sql_type: BIT
+      login_block_condition: "value = 0"
+
+  isdCode:
+    range: string
+    required: false
+    description: "International dialing code (e.g. +91, +1). Co-dependent with mobileNumber"
+    annotations:
+      skos:prefLabel: "ISD Code"
+      skos:example: "+91, +1, +44"
+      sql_column: isdCode
+      co_required_with: mobileNumber
+
+  mobileNumber:
+    range: string
+    required: false
+    description: "Mobile phone number (SQL). Co-dependent with isdCode"
+    annotations:
+      skos:prefLabel: "Mobile Number (SQL)"
+      sql_column: mobileNumber
+      co_required_with: isdCode
+
+  # ── PartnerMapping (SQL) ───────────────────────────────────
+
+  bpc:
+    range: string
+    required: true
+    description: "Business Partner Code — parent grouping above partnerCode"
+    annotations:
+      skos:prefLabel: "BPC"
+      skos:definition: "Higher-level partner grouping. partnerCode is a child of this value."
+      sql_column: bpc
+      hierarchy_role: parent
+
+  partnerCode:
+    range: string
+    required: true
+    description: "Partner code — child code nested under a BPC group"
+    annotations:
+      skos:prefLabel: "Partner Code"
+      skos:definition: "Specific partner identifier under a BPC group"
+      sql_column: partnercode
+      hierarchy_role: child
+      parent_slot: bpc
+
+  # FIX 1: minimum_value/maximum_value moved from type to slot
+  mappingIsActive:
+    range: SqlBit
+    required: false
+    minimum_value: 0
+    maximum_value: 1
+    in_subset:
+      - LoginDiagnostics
+    description: >-
+      SQL BIT — 1 means this partner mapping row is active.
+      Login blocked if no row with mappingIsActive=1 exists for the user.
+    annotations:
+      skos:prefLabel: "Mapping Is Active"
+      sql_column: isactive
+      sql_type: BIT
+      login_block_condition: "no row with value = 1 for this userId"
+
+  isDefault:
+    range: SqlBit
+    required: false
+    minimum_value: 0
+    maximum_value: 1
+    description: >-
+      SQL BIT — marks the default partner mapping for this user.
+      Exactly one row per userId must have isDefault=1.
+    annotations:
+      skos:prefLabel: "Is Default Mapping"
+      skos:note: "Business rule: exactly one isDefault=1 per userId. Multiple rows = data integrity bug."
+      sql_column: isdefault
+      sql_type: BIT
+      uniqueness_rule: exactly_one_true_per_userId
+
+  # ── MobileVerificationStatus (SQL) ────────────────────────
+
+  # FIX 1: minimum_value/maximum_value moved from type to slot
+  isMobileNumberVerifiedSQL:
+    range: SqlBit
+    required: true
+    minimum_value: 0
+    maximum_value: 1
+    in_subset:
+      - LoginDiagnostics
+      - CrossSourceCheck
+    description: >-
+      SQL BIT flag for mobile number verification.
+      Cross-checked against MongoDB isMobileNumberVerifiedMongo.
+      Mismatch = data sync issue — report directly, do not escalate to New Relic.
+    annotations:
+      skos:prefLabel: "Is Mobile Verified (SQL)"
+      sql_column: ismobilenumberverified
+      sql_type: BIT
+      cross_source_check: "UserDocument.isMobileNumberVerifiedMongo"
+      normalization_before_compare: "BIT 0→false, 1→true"
+
+  # ── UserDocument (MongoDB) ────────────────────────────────
+
+  userName:
+    range: string
+    required: true
+    in_subset:
+      - LoginDiagnostics
+      - CrossSourceCheck
+    description: "MongoDB userName field. Cross-source link key to SQL UM_Users.username"
+    annotations:
+      skos:prefLabel: "Username (MongoDB)"
+      mongo_field: userName
+      cross_source_link: "User.username"
+
+  normalizedUserName:
+    range: string
+    required: false
+    description: "Lowercase version of userName. Used for case-insensitive user lookups"
+    annotations:
+      skos:prefLabel: "Normalized Username"
+      skos:note: "Derived field. Rule: lowercase(userName). Not authored — always computed."
+      mongo_field: normalizedUserName
+      derived_from: userName
+      derivation_rule: "lowercase(userName)"
+
+  mongoFirstName:
+    range: string
+    required: false
+    description: "First name in MongoDB users document"
+    annotations:
+      skos:prefLabel: "First Name (MongoDB)"
+      mongo_field: firstName
+
+  mongoLastName:
+    range: string
+    required: false
+    description: "Last name in MongoDB users document"
+    annotations:
+      skos:prefLabel: "Last Name (MongoDB)"
+      mongo_field: lastName
+
+  isMobileNumberVerifiedMongo:
+    range: boolean
+    required: false
+    in_subset:
+      - LoginDiagnostics
+      - CrossSourceCheck
+    description: >-
+      MongoDB native boolean for mobile number verification.
+      Cross-checked against SQL isMobileNumberVerifiedSQL after BIT normalization.
+    annotations:
+      skos:prefLabel: "Is Mobile Verified (MongoDB)"
+      mongo_field: ismobileNumberVerified
+      cross_source_check: "MobileVerificationStatus.isMobileNumberVerifiedSQL"
+      normalization_note: "Compare MongoDB true/false with SQL BIT 1/0 after normalization"
+
+  mongoAuthenticationType:
+    range: AuthenticationTypeEnum
+    required: false
+    description: "Authentication type in MongoDB (integer: 1=Password, 2=SSO)"
+    annotations:
+      skos:prefLabel: "Authentication Type (MongoDB)"
+      mongo_field: authenticationType
+      mongo_type: INT
+
+  mongoIsdCode:
+    range: string
+    required: false
+    description: "International dialing code in MongoDB. Co-dependent with mobileNo"
+    annotations:
+      skos:prefLabel: "ISD Code (MongoDB)"
+      mongo_field: isdCode
+      co_required_with: mobileNo
+
+  mobileNo:
+    range: string
+    required: false
+    description: "Mobile number in MongoDB. Co-dependent with mongoIsdCode"
+    annotations:
+      skos:prefLabel: "Mobile No (MongoDB)"
+      mongo_field: mobileNo
+      co_required_with: mongoIsdCode
+
+  userPartnerMapping:
+    range: PartnerMapping
+    multivalued: true
+    required: false
+    inlined_as_list: true
+    description: >-
+      Embedded array of partner mappings in MongoDB user document.
+      Mirrors the structure of SQL Um_Userpartnermapping.
+    annotations:
+      skos:prefLabel: "User Partner Mapping (MongoDB)"
+      mongo_field: userpartnermapping
+      mirrors_sql_table: Um_Userpartnermapping
+
+
+# ─────────────────────────────────────────────────────────────
+# SKOS CONCEPT SCHEME  (processed by gen_skos.py)
+# ─────────────────────────────────────────────────────────────
+x_skos_scheme:
+  id: gep:LoginConceptScheme
+  prefLabel: "Login Query Agent Concepts"
+  description: "SKOS concept scheme for the Login Query Agent domain ontology"
+
+  concepts:
+    - id: gep:AbstractUser
+      prefLabel: "User"
+      definition: "A person who has an account in the system"
+      topConceptOf: gep:LoginConceptScheme
+
+    - id: gep:User
+      prefLabel: "SQL User"
+      definition: "User record sourced from SQL Server UM_Users table"
+      broader: gep:AbstractUser
+      inScheme: gep:LoginConceptScheme
+
+    - id: gep:UserDocument
+      prefLabel: "MongoDB User Document"
+      definition: "User document sourced from MongoDB users collection"
+      broader: gep:AbstractUser
+      inScheme: gep:LoginConceptScheme
+
+    - id: gep:PartnerMapping
+      prefLabel: "Partner Mapping"
+      definition: "Maps a user to one or more BPC and partner codes"
+      inScheme: gep:LoginConceptScheme
+
+    - id: gep:MobileVerificationStatus
+      prefLabel: "Mobile Verification Status (SQL)"
+      definition: "SQL record of whether a user's mobile number has been verified"
+      inScheme: gep:LoginConceptScheme
+
+    - id: gep:AuthenticationTypeEnum
+      prefLabel: "Authentication Type"
+      definition: "Enumeration of allowed authentication mechanisms"
+      inScheme: gep:LoginConceptScheme
+
+  hierarchies:
+    - broader: gep:bpc
+      narrower: gep:partnerCode
+      note: "BPC is the parent grouping code. partnerCode is a child code under BPC."
+    - broader: gep:AbstractUser
+      narrower: gep:User
+    - broader: gep:AbstractUser
+      narrower: gep:UserDocument
+
+
+# ─────────────────────────────────────────────────────────────
+# INTENTS  (custom extension — processed by gen_intents.py)
+# ─────────────────────────────────────────────────────────────
+x_intents:
+
+  - id: intent_diagnose_login_failure
+    name: DiagnoseLoginFailure
+    description: "Diagnose why a specific user cannot login"
+    match_patterns:
+      - "user cannot login"
+      - "can't login"
+      - "unable to login"
+      - "login not working"
+      - "login issue"
+      - "login failure"
+      - "why can't {username} login"
+      - "login problem"
+      - "user login failed"
+    entities:
+      - User
+      - PartnerMapping
+      - MobileVerificationStatus
+      - UserDocument
+    validation_sequence:
+      - LoginBlockShape
+      - PartnerMappingShape
+      - DefaultPartnerShape
+      - MobileConsistencyShape
+    primary_datasources:
+      - sqlserver
+      - mongodb
+    conditional_datasources:
+      - newrelic
+
+
+# ─────────────────────────────────────────────────────────────
+# DECISION RULES  (custom extension — processed by gen_rules.py)
+# ─────────────────────────────────────────────────────────────
+x_decision_rules:
+
+  - id: dr_001
+    name: EscalateToNewRelic
+    description: >-
+      When all SHACL shapes pass (user data looks correct in both SQL and MongoDB),
+      escalate to New Relic to find a runtime or infrastructure root cause.
+    trigger: ALL_SHAPES_PASS
+    action: query_newrelic
+    nrql_template: >-
+      SELECT * FROM Log WHERE username = '{username}' SINCE 1 hour ago
+    priority: 1
+
+  - id: dr_002
+    name: ReportMobileVerificationMismatch
+    description: >-
+      When SQL ismobilenumberverified and MongoDB ismobileNumberVerified diverge,
+      report the data sync issue directly. Do not escalate to New Relic.
+    trigger: CROSS_SOURCE_MISMATCH
+    fields:
+      - MobileVerificationStatus.isMobileNumberVerifiedSQL
+      - UserDocument.isMobileNumberVerifiedMongo
+    action: report_mismatch
+    message_template: >-
+      Data sync issue for user '{username}':
+      SQL isMobileNumberVerified={sql_value},
+      MongoDB ismobileNumberVerified={mongo_value}.
+    priority: 2
+
+  - id: dr_003
+    name: ReportLoginBlocked
+    description: >-
+      When LoginBlockShape fails (account locked or deactivated),
+      report the specific reason. Do not escalate to New Relic.
+    trigger: SHAPE_VIOLATION
+    shape: LoginBlockShape
+    action: report_block_reason
+    message_template: "Login blocked for '{username}': {violation_message}"
+    priority: 3
+
+  - id: dr_004
+    name: ReportNoActivePartnerMapping
+    description: >-
+      When PartnerMappingShape fails (no active partner mapping row exists),
+      report missing partner mapping. Do not escalate to New Relic.
+    trigger: SHAPE_VIOLATION
+    shape: PartnerMappingShape
+    action: report_block_reason
+    message_template: "Login blocked for '{username}': No active partner mapping found."
+    priority: 4
+
+
+# ─────────────────────────────────────────────────────────────
+# SHACL RULES  (FIX 6 — processed by gen_shacl.py)
+#
+# IMPORTANT: Standard `gen-shacl` from LinkML only generates:
+#   - sh:minCount   (from required: true)
+#   - sh:datatype   (from range types)
+#   - sh:pattern    (from pattern fields)
+#   - sh:class      (from range: ClassName)
+#
+# It does NOT generate the rules below. These require our
+# custom gen_shacl.py pipeline which reads x_shacl_rules
+# and produces:
+#   - LoginBlockShape       (sh:in constraints)
+#   - PartnerMappingShape   (SPARQL-based group constraint)
+#   - DefaultPartnerShape   (SPARQL-based group constraint)
+#   - MobileConsistencyShape (custom Python — not SHACL at all)
+#
+# Build dependency: gen_shacl.py MUST run after LinkML gen-shacl
+# to merge standard + custom shapes into final output file.
+# ─────────────────────────────────────────────────────────────
+x_shacl_rules:
+
+  - id: LoginBlockShape
+    target_class: User
+    description: "User must not be locked and must be active to permit login"
+    constraints:
+      - type: sh_in
+        property: isLocked
+        allowed_values: [0]
+        datatype: xsd:integer
+        message: "Account is locked (isLocked=1). Login blocked."
+      - type: sh_in
+        property: isActive
+        allowed_values: [1]
+        datatype: xsd:integer
+        message: "Account is deactivated (isActive=0). Login blocked."
+
+  - id: PartnerMappingShape
+    target_class: PartnerMapping
+    description: "At least one active partner mapping must exist per user"
+    constraints:
+      - type: sparql
+        message: "No active partner mapping (mappingIsActive=1) found for user. Login blocked."
+        sparql: >-
+          PREFIX gep: <https://gep.com/ontology/login#>
+          SELECT $this WHERE {
+            $this gep:userId ?uid .
+            FILTER NOT EXISTS {
+              ?m gep:userId ?uid ;
+                 gep:mappingIsActive 1 .
+            }
+          }
+
+  - id: DefaultPartnerShape
+    target_class: PartnerMapping
+    description: "Exactly one partner mapping row must be the default per user"
+    constraints:
+      - type: sparql
+        message: "User must have exactly one default partner mapping (isDefault=1)."
+        sparql: >-
+          PREFIX gep: <https://gep.com/ontology/login#>
+          SELECT $this WHERE {
+            $this gep:userId ?uid .
+            {
+              SELECT ?uid (COUNT(?d) AS ?cnt) WHERE {
+                ?d gep:userId ?uid ;
+                   gep:isDefault 1 .
+              } GROUP BY ?uid
+            }
+            FILTER (?cnt != 1)
+          }
+
+  - id: MobileConsistencyShape
+    type: custom_python
+    description: >-
+      SQL and MongoDB mobile verification status must be consistent.
+      NOT expressible in standard SHACL (which validates a single RDF graph).
+      Implemented in mcp_server/tools/validate_data.py.
+    implementation_class: "mcp_server.tools.validate_data.MobileConsistencyValidator"
+    logic: >-
+      1. Fetch MobileVerificationStatus.isMobileNumberVerifiedSQL for the user (SQL BIT).
+      2. Normalize SQL BIT: 0→False, 1→True.
+      3. Fetch UserDocument.isMobileNumberVerifiedMongo for the user (MongoDB boolean).
+      4. Compare normalized values. If different → violation.
+    source_a:
+      class: MobileVerificationStatus
+      property: isMobileNumberVerifiedSQL
+      normalize: BIT_TO_BOOL
+    source_b:
+      class: UserDocument
+      property: isMobileNumberVerifiedMongo
+    join_on: username
+    message: >-
+      Mobile verification mismatch for '{username}':
+      SQL={source_a_value}, MongoDB={source_b_value}.

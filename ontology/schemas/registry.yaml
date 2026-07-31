@@ -1,0 +1,31 @@
+# =============================================================
+# Schema Registry — Central manifest for all domain ontologies
+# Add a new entry here whenever a new domain YAML is created.
+# =============================================================
+
+registry_version: "1.0.0"
+namespace_base: "https://gep.com/ontology/"
+
+schemas:
+
+  - name: login
+    title: "Login Query Agent Ontology"
+    description: >-
+      Models user identity, partner mapping, and mobile verification
+      across SQL Server and MongoDB for login diagnostics.
+    current_version: "1.0.0"
+    schema_path: "login/v1.0.0/login.yaml"
+    status: active
+    versions:
+      - version: "1.0.0"
+        path: "login/v1.0.0/login.yaml"
+        status: active
+        released: "2026-07-30"
+        changelog: "Initial version — User, PartnerMapping, MobileVerificationStatus, UserDocument"
+
+  # Add future schemas below, e.g.:
+  # - name: user_management
+  #   title: "User Management Ontology"
+  #   current_version: "1.0.0"
+  #   schema_path: "user_management/v1.0.0/user_management.yaml"
+  #   status: draft

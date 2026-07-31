@@ -1,0 +1,28 @@
+# list_intents.sparql
+#
+# PURPOSE: List all resolvable intent patterns known to the KG.
+# Used by the MCP's list_intents tool so the user/agent can discover
+# what kinds of questions this schema can answer.
+#
+# PLACEHOLDERS:
+#   __INTENTS_GRAPH__  e.g. urn:kg:login:v1.0.0:intents
+
+PREFIX gep:  <https://gep.com/ontology/login#>
+PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+
+SELECT DISTINCT
+    ?intent
+    ?intentName
+    ?intentDescription
+    ?textPattern
+    ?entity
+WHERE {
+    GRAPH <__INTENTS_GRAPH__> {
+        ?intent a gep:Intent ;
+                gep:intentName ?intentName ;
+                gep:textPattern ?textPattern .
+        OPTIONAL { ?intent rdfs:comment     ?intentDescription }
+        OPTIONAL { ?intent gep:involvesEntity ?entity         }
+    }
+}
+ORDER BY ?intentName ?textPattern

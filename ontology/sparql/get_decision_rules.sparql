@@ -1,0 +1,38 @@
+# get_decision_rules.sparql
+#
+# PURPOSE: Return all decision rules from the rules graph, ordered by priority.
+# The agent uses these after SHACL validation to decide what action to take:
+#   ALL_SHAPES_PASS        → escalate to New Relic (dr_001)
+#   CROSS_SOURCE_MISMATCH  → report sync issue (dr_002)
+#   SHAPE_VIOLATION        → report block reason (dr_003, dr_004)
+#
+# PLACEHOLDERS:
+#   __RULES_GRAPH__  e.g. urn:kg:login:v1.0.0:rules
+
+PREFIX gep:  <https://gep.com/ontology/login#>
+PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+
+SELECT
+    ?rule
+    ?label
+    ?triggerType
+    ?action
+    ?rulePriority
+    ?nrqlTemplate
+    ?messageTemplate
+    ?targetShape
+    ?involvedField
+WHERE {
+    GRAPH <__RULES_GRAPH__> {
+        ?rule a gep:DecisionRule ;
+              gep:triggerType  ?triggerType ;
+              gep:action       ?action ;
+              gep:rulePriority ?rulePriority .
+        OPTIONAL { ?rule rdfs:label         ?label          }
+        OPTIONAL { ?rule gep:nrqlTemplate   ?nrqlTemplate   }
+        OPTIONAL { ?rule gep:messageTemplate ?messageTemplate }
+        OPTIONAL { ?rule gep:targetShape    ?targetShape    }
+        OPTIONAL { ?rule gep:involvedField  ?involvedField  }
+    }
+}
+ORDER BY ?rulePriority
