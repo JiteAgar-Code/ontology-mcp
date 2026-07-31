@@ -1,0 +1,67 @@
+# ─────────────────────────────────────────────────────────────────────
+# Fuseki 4+ Dataset Configuration — Login Knowledge Graph
+#
+# Start Fuseki from the project root (c:\Ontology):
+#   java -jar fuseki/fuseki-server.jar --config fuseki/config/login-kg.ttl
+#
+# Prerequisites:
+#   • Java 11+   — download: https://adoptium.net  (Eclipse Temurin 17 LTS)
+#   • Fuseki JAR — download: https://jena.apache.org/download/
+#                  File: apache-jena-fuseki-X.Y.Z.zip  → extract fuseki-server.jar here
+#
+# After startup, Fuseki serves:
+#   SPARQL query  : http://localhost:3030/login-kg/sparql
+#   SPARQL update : http://localhost:3030/login-kg/update
+#   Graph store   : http://localhost:3030/login-kg/data
+#   UI / ping     : http://localhost:3030/
+#
+# TDB2 storage: fuseki/data/login-kg/  (created on first start)
+# ─────────────────────────────────────────────────────────────────────
+
+PREFIX fuseki: <http://jena.apache.org/fuseki#>
+PREFIX rdf:    <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
+PREFIX rdfs:   <http://www.w3.org/2000/01/rdf-schema#>
+PREFIX tdb2:   <http://jena.apache.org/2016/tdb#>
+PREFIX ja:     <http://jena.hpl.hp.com/2005/11/Assembler#>
+
+[] rdf:type fuseki:Server ;
+   fuseki:services (
+     <#login_kg_service>
+   ) .
+
+<#login_kg_service> rdf:type fuseki:Service ;
+    rdfs:label "Login Knowledge Graph" ;
+    fuseki:name "login-kg" ;
+
+    # Read-write SPARQL query endpoint
+    fuseki:endpoint [
+        fuseki:operation fuseki:query ;
+        fuseki:name "sparql"
+    ] ;
+
+    # SPARQL 1.1 Update endpoint
+    fuseki:endpoint [
+        fuseki:operation fuseki:update ;
+        fuseki:name "update"
+    ] ;
+
+    # Graph Store Protocol — read-only
+    fuseki:endpoint [
+        fuseki:operation fuseki:gsp-r ;
+        fuseki:name "get"
+    ] ;
+
+    # Graph Store Protocol — read + write (used by load_kg.py)
+    fuseki:endpoint [
+        fuseki:operation fuseki:gsp-rw ;
+        fuseki:name "data"
+    ] ;
+
+    fuseki:dataset <#login_kg_dataset> ;
+    .
+
+# TDB2 persistent on-disk storage.
+# Path is relative to where Fuseki is launched (project root).
+<#login_kg_dataset> rdf:type tdb2:DatasetTDB2 ;
+    tdb2:location "infra/fuseki/data/login-kg" ;
+    .
