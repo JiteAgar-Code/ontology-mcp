@@ -8,22 +8,17 @@ then substitutes them into SPARQL template files in sparql/.
 The meta graph holds a single subject <urn:kg:{schema}:> with predicates:
   urn:kg:currentVersion, urn:kg:activeOntologyGraph,
   urn:kg:activeShaclGraph, urn:kg:activeSkosGraph,
-  urn:kg:activeDescriptorsGraph, urn:kg:activeRulesGraph,
-  urn:kg:activeIntentsGraph
+  urn:kg:activeDescriptorsGraph, urn:kg:activeRulesGraph
 """
 
 from __future__ import annotations
 
-import re
 from pathlib import Path
 from typing import Any
 
 import requests
 
 SPARQL_DIR = Path(__file__).parent.parent.parent.parent / "ontology" / "sparql"
-
-# Characters that could enable SPARQL injection if embedded in a FILTER literal.
-_INJECT_RE = re.compile(r'["\'\\\x00-\x1f]')
 
 
 class SparqlClient:
@@ -58,18 +53,13 @@ class SparqlClient:
             raise FileNotFoundError(f"SPARQL template not found: {path}")
         return path.read_text(encoding="utf-8")
 
-    @staticmethod
-    def _sanitise(text: str) -> str:
-        """Strip SPARQL-injection characters; truncate to 200 chars."""
-        return _INJECT_RE.sub("", text)[:200]
-
     # ── meta graph: active version resolution ─────────────────────────
 
     def get_active_graphs(self, schema: str) -> dict[str, str]:
         """
         Return the active version's named graph URIs for `schema`.
         Keys: version, ontologyGraph, shaclGraph, skosGraph,
-              descriptorsGraph, rulesGraph, intentsGraph.
+              descriptorsGraph, rulesGraph.
         Result is cached for the lifetime of this client instance.
         """
         if schema in self._graphs_cache:
@@ -79,7 +69,7 @@ class SparqlClient:
         root_iri = f"urn:kg:{schema}:"
         q = f"""
 SELECT ?version ?ontologyGraph ?shaclGraph ?skosGraph
-       ?descriptorsGraph ?rulesGraph ?intentsGraph
+       ?descriptorsGraph ?rulesGraph
 WHERE {{
     GRAPH <{meta_iri}> {{
         <{root_iri}> <urn:kg:currentVersion>        ?version ;
@@ -87,8 +77,7 @@ WHERE {{
                      <urn:kg:activeShaclGraph>        ?shaclGraph ;
                      <urn:kg:activeSkosGraph>         ?skosGraph ;
                      <urn:kg:activeDescriptorsGraph>  ?descriptorsGraph ;
-                     <urn:kg:activeRulesGraph>        ?rulesGraph ;
-                     <urn:kg:activeIntentsGraph>      ?intentsGraph .
+                     <urn:kg:activeRulesGraph>        ?rulesGraph .
     }}
 }}
 """
@@ -104,22 +93,6 @@ WHERE {{
         return graphs
 
     # ── tool-facing queries ───────────────────────────────────────────
-
-    def resolve_intent(self, schema: str, prompt: str) -> list[dict]:
-        """
-        Match `prompt` against intent text patterns in the KG.
-        Returns SPARQL bindings with entity, datasource, rule, and shape data.
-        """
-        graphs   = self.get_active_graphs(schema)
-        template = self._load_template("resolve_intent.sparql")
-        query = (
-            template
-            .replace("__INTENTS_GRAPH__",     graphs["intentsGraph"])
-            .replace("__DESCRIPTORS_GRAPH__", graphs["descriptorsGraph"])
-            .replace("__RULES_GRAPH__",       graphs["rulesGraph"])
-            .replace("__INTENT_TEXT__",       self._sanitise(prompt.lower()))
-        )
-        return self._query(schema, query)
 
     def get_entity_descriptor(
         self, schema: str, entity_iri: str, version: str = ""
@@ -137,24 +110,6 @@ WHERE {{
             .replace("__ENTITY_IRI__",         entity_iri)
         )
         return self._query(schema, query)
-
-    def list_intents(self, schema: str) -> list[dict]:
-        """Return all intent names + text patterns for `schema`."""
-        graphs   = self.get_active_graphs(schema)
-        template = self._load_template("list_intents.sparql")
-        return self._query(
-            schema,
-            template.replace("__INTENTS_GRAPH__", graphs["intentsGraph"])
-        )
-
-    def get_decision_rules(self, schema: str) -> list[dict]:
-        """Return all decision rules ordered by priority."""
-        graphs   = self.get_active_graphs(schema)
-        template = self._load_template("get_decision_rules.sparql")
-        return self._query(
-            schema,
-            template.replace("__RULES_GRAPH__", graphs["rulesGraph"])
-        )
 
 
 # ── module-level singleton ────────────────────────────────────────────
