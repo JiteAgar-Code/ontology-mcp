@@ -1,4 +1,4 @@
-@prefix gep: <https://gep.com/ontology/login#> .
+@prefix gep: <http://gep.com/ontology/login#> .
 @prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
 @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
 @prefix sh: <http://www.w3.org/ns/shacl#> .
@@ -7,70 +7,144 @@
 gep:AbstractUser a sh:NodeShape ;
     rdfs:comment "Abstract base concept — a user account in the system" ;
     sh:closed false ;
-    sh:ignoredProperties ( gep:mongoLastName gep:authenticationType gep:isdCode gep:mongoFirstName gep:hasPartnerMappings gep:isMobileNumberVerifiedMongo gep:isActive gep:mobileNo gep:isLocked gep:userPartnerMapping gep:emailAddress gep:userId gep:firstName gep:mobileNumber gep:username rdf:type gep:normalizedUserName gep:mongoIsdCode gep:mongoAuthenticationType gep:userName gep:lastName gep:hasMobileVerificationStatus ) ;
+    sh:ignoredProperties ( gep:isLocked gep:emailAddress gep:mongoIsActive gep:isActive gep:isDeleted gep:mongoIsLocked gep:mongoIsSystemUser gep:userName gep:mobileNumber gep:hasMobileVerificationStatus gep:hasPartnerMappings gep:isdCode gep:lastName rdf:type gep:username gep:userPartnerMappings gep:firstName gep:normalizedUserName gep:normalizedFullName gep:mobileNo gep:isSystemUser gep:normalizedEmailAddress gep:isMobileNumberVerifiedMongo gep:normalizedFirstName gep:normalizedLastName gep:userId gep:mongoIsdCode gep:userType gep:authenticationType ) ;
     sh:targetClass gep:AbstractUser .
 
 gep:UserDocument a sh:NodeShape ;
     rdfs:comment "User document from MongoDB users collection" ;
     sh:closed true ;
     sh:ignoredProperties ( rdf:type ) ;
-    sh:property [ sh:datatype xsd:string ;
-            sh:description "Last name in MongoDB users document" ;
+    sh:property [ sh:datatype xsd:boolean ;
+            sh:description "MongoDB native boolean — false means account inactive. Maps to SQL isActive (BIT)" ;
             sh:maxCount 1 ;
             sh:nodeKind sh:Literal ;
-            sh:order 3 ;
-            sh:path gep:mongoLastName ],
-        [ sh:datatype xsd:string ;
-            sh:description "Mobile number in MongoDB. Co-dependent with mongoIsdCode" ;
+            sh:order 11 ;
+            sh:path gep:mongoIsActive ],
+        [ sh:description "Authentication mechanism. Integer in both SQL and MongoDB. 1 = Non-SSO, 2 = SSO." ;
+            sh:in ( "NonSSO" "SSO" ) ;
             sh:maxCount 1 ;
-            sh:nodeKind sh:Literal ;
-            sh:order 7 ;
-            sh:path gep:mobileNo ],
+            sh:minCount 1 ;
+            sh:order 5 ;
+            sh:path gep:authenticationType ],
         [ sh:datatype xsd:string ;
-            sh:description "Lowercase version of userName. Used for case-insensitive user lookups" ;
+            sh:description "User email address — stored in both SQL and MongoDB" ;
             sh:maxCount 1 ;
+            sh:minCount 1 ;
             sh:nodeKind sh:Literal ;
             sh:order 1 ;
-            sh:path gep:normalizedUserName ],
+            sh:path gep:emailAddress ;
+            sh:pattern "^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$" ],
         [ sh:datatype xsd:string ;
-            sh:description "International dialing code in MongoDB. Co-dependent with mobileNo" ;
-            sh:maxCount 1 ;
-            sh:nodeKind sh:Literal ;
-            sh:order 6 ;
-            sh:path gep:mongoIsdCode ],
-        [ sh:datatype xsd:string ;
-            sh:description "First name in MongoDB users document" ;
+            sh:description "User first name — stored in both SQL and MongoDB" ;
             sh:maxCount 1 ;
             sh:nodeKind sh:Literal ;
             sh:order 2 ;
-            sh:path gep:mongoFirstName ],
+            sh:path gep:firstName ],
         [ sh:datatype xsd:string ;
-            sh:description "MongoDB userName field. Cross-source link key to SQL UM_Users.username" ;
+            sh:description "Lowercase firstName. Used for case-insensitive name lookups" ;
+            sh:maxCount 1 ;
+            sh:nodeKind sh:Literal ;
+            sh:order 8 ;
+            sh:path gep:normalizedFirstName ],
+        [ sh:datatype xsd:string ;
+            sh:description "Lowercase emailAddress. Used for case-insensitive email lookups" ;
+            sh:maxCount 1 ;
+            sh:nodeKind sh:Literal ;
+            sh:order 7 ;
+            sh:path gep:normalizedEmailAddress ],
+        [ sh:datatype xsd:boolean ;
+            sh:description "MongoDB native boolean — true means account is locked. Maps to SQL isLocked (BIT)" ;
+            sh:maxCount 1 ;
+            sh:nodeKind sh:Literal ;
+            sh:order 12 ;
+            sh:path gep:mongoIsLocked ],
+        [ sh:datatype xsd:string ;
+            sh:description "User last name — stored in both SQL and MongoDB" ;
+            sh:maxCount 1 ;
+            sh:nodeKind sh:Literal ;
+            sh:order 3 ;
+            sh:path gep:lastName ],
+        [ sh:datatype xsd:boolean ;
+            sh:description "MongoDB native boolean for mobile number verification. Cross-checked against SQL isMobileNumberVerified after BIT normalization." ;
+            sh:maxCount 1 ;
+            sh:nodeKind sh:Literal ;
+            sh:order 16 ;
+            sh:path gep:isMobileNumberVerifiedMongo ],
+        [ sh:class gep:IsdCode ;
+            sh:description "Embedded ISD code object {countryCode, extension}. Co-dependent with mobileNo" ;
+            sh:maxCount 1 ;
+            sh:nodeKind sh:BlankNodeOrIRI ;
+            sh:order 14 ;
+            sh:path gep:mongoIsdCode ],
+        [ sh:datatype xsd:boolean ;
+            sh:description "MongoDB native boolean — true means internal system account. Maps to SQL isSystemUser (BIT)" ;
+            sh:maxCount 1 ;
+            sh:nodeKind sh:Literal ;
+            sh:order 13 ;
+            sh:path gep:mongoIsSystemUser ],
+        [ sh:description "User category. Integer in both SQL and MongoDB. 0 = Buyer, 1 = Supplier." ;
+            sh:in ( "Buyer" "Supplier" ) ;
+            sh:maxCount 1 ;
+            sh:order 4 ;
+            sh:path gep:userType ],
+        [ sh:class gep:MongoPartnerMapping ;
+            sh:description "Embedded array of partner mapping sub-documents in MongoDB users document" ;
+            sh:nodeKind sh:BlankNodeOrIRI ;
+            sh:order 17 ;
+            sh:path gep:userPartnerMappings ],
+        [ sh:datatype xsd:string ;
+            sh:description "Lowercase lastName. Used for case-insensitive name lookups" ;
+            sh:maxCount 1 ;
+            sh:nodeKind sh:Literal ;
+            sh:order 9 ;
+            sh:path gep:normalizedLastName ],
+        [ sh:datatype xsd:string ;
+            sh:description "Lowercase userName. Used for case-insensitive user lookups" ;
+            sh:maxCount 1 ;
+            sh:nodeKind sh:Literal ;
+            sh:order 6 ;
+            sh:path gep:normalizedUserName ],
+        [ sh:datatype xsd:string ;
+            sh:description "MongoDB userName field. Cross-source link key — equals SQL UM_Users.username" ;
             sh:maxCount 1 ;
             sh:minCount 1 ;
             sh:nodeKind sh:Literal ;
             sh:order 0 ;
             sh:path gep:userName ],
-        [ sh:datatype xsd:boolean ;
-            sh:description "MongoDB native boolean for mobile number verification. Cross-checked against SQL isMobileNumberVerifiedSQL after BIT normalization." ;
+        [ sh:datatype xsd:string ;
+            sh:description "Lowercase concatenation of first and last name" ;
             sh:maxCount 1 ;
             sh:nodeKind sh:Literal ;
-            sh:order 4 ;
-            sh:path gep:isMobileNumberVerifiedMongo ],
-        [ sh:class gep:PartnerMapping ;
-            sh:description "Embedded array of partner mappings in MongoDB user document. Mirrors the structure of SQL Um_Userpartnermapping." ;
-            sh:nodeKind sh:IRI ;
-            sh:order 8 ;
-            sh:path gep:userPartnerMapping ],
-        [ sh:description "Authentication type in MongoDB (integer: 1=Password, 2=SSO)" ;
-            sh:in ( "Password" "SSO" ) ;
+            sh:order 10 ;
+            sh:path gep:normalizedFullName ],
+        [ sh:datatype xsd:string ;
+            sh:description "Mobile number in MongoDB. Co-dependent with mongoIsdCode" ;
             sh:maxCount 1 ;
-            sh:order 5 ;
-            sh:path gep:mongoAuthenticationType ] ;
+            sh:nodeKind sh:Literal ;
+            sh:order 15 ;
+            sh:path gep:mobileNo ] ;
     sh:targetClass gep:UserDocument .
 
+gep:IsdCode a sh:NodeShape ;
+    rdfs:comment "Embedded ISD code object in MongoDB users.isdCode" ;
+    sh:closed true ;
+    sh:ignoredProperties ( rdf:type ) ;
+    sh:property [ sh:datatype xsd:string ;
+            sh:description "Dialing extension inside the isdCode embedded object (e.g. +91, +1)" ;
+            sh:maxCount 1 ;
+            sh:nodeKind sh:Literal ;
+            sh:order 1 ;
+            sh:path gep:isdExtension ],
+        [ sh:datatype xsd:string ;
+            sh:description "Country code inside the isdCode embedded object (e.g. IN, US, GB)" ;
+            sh:maxCount 1 ;
+            sh:nodeKind sh:Literal ;
+            sh:order 0 ;
+            sh:path gep:isdCountryCode ] ;
+    sh:targetClass gep:IsdCode .
+
 gep:MobileVerificationStatus a sh:NodeShape ;
-    rdfs:comment "SQL-side mobile verification record — um_usermobileverificationstatus" ;
+    rdfs:comment "SQL-side mobile verification record — UM_UserMobileNumberVerified" ;
     sh:closed true ;
     sh:ignoredProperties ( rdf:type ) ;
     sh:property [ sh:datatype xsd:string ;
@@ -81,72 +155,125 @@ gep:MobileVerificationStatus a sh:NodeShape ;
             sh:order 0 ;
             sh:path gep:username ],
         [ sh:datatype xsd:integer ;
-            sh:description "SQL BIT flag for mobile number verification. Cross-checked against MongoDB isMobileNumberVerifiedMongo. Mismatch = data sync issue — report directly, do not escalate to New Relic." ;
+            sh:description "SQL BIT flag for mobile number verification (maps to SQL column isMobileNumberverified). Cross-checked against MongoDB isMobileNumberVerifiedMongo. Mismatch = data sync issue — report directly, do not escalate to New Relic." ;
             sh:maxCount 1 ;
             sh:maxInclusive 1 ;
             sh:minCount 1 ;
             sh:minInclusive 0 ;
             sh:nodeKind sh:Literal ;
             sh:order 1 ;
-            sh:path gep:isMobileNumberVerifiedSQL ] ;
+            sh:path gep:isMobileNumberVerified ] ;
     sh:targetClass gep:MobileVerificationStatus .
+
+gep:MongoPartnerMapping a sh:NodeShape ;
+    rdfs:comment "Embedded partner mapping sub-document in MongoDB users.userPartnerMappings array" ;
+    sh:closed true ;
+    sh:ignoredProperties ( rdf:type ) ;
+    sh:property [ sh:datatype xsd:integer ;
+            sh:description "Partner code inside MongoDB userPartnerMappings sub-document (INT)" ;
+            sh:maxCount 1 ;
+            sh:nodeKind sh:Literal ;
+            sh:order 2 ;
+            sh:path gep:mongoPartnerCode ],
+        [ sh:datatype xsd:integer ;
+            sh:description "BPC inside MongoDB userPartnerMappings sub-document (INT)" ;
+            sh:maxCount 1 ;
+            sh:nodeKind sh:Literal ;
+            sh:order 1 ;
+            sh:path gep:mongoBpc ],
+        [ sh:datatype xsd:boolean ;
+            sh:description "isActive inside MongoDB userPartnerMappings sub-document" ;
+            sh:maxCount 1 ;
+            sh:nodeKind sh:Literal ;
+            sh:order 3 ;
+            sh:path gep:mongoMappingIsActive ],
+        [ sh:datatype xsd:string ;
+            sh:description "userId stored as string inside MongoDB userPartnerMappings sub-document" ;
+            sh:maxCount 1 ;
+            sh:nodeKind sh:Literal ;
+            sh:order 0 ;
+            sh:path gep:mongoMappingUserId ],
+        [ sh:datatype xsd:string ;
+            sh:description "contactCode inside MongoDB userPartnerMappings sub-document" ;
+            sh:maxCount 1 ;
+            sh:nodeKind sh:Literal ;
+            sh:order 4 ;
+            sh:path gep:mongoContactCode ] ;
+    sh:targetClass gep:MongoPartnerMapping .
+
+gep:PartnerMapping a sh:NodeShape ;
+    rdfs:comment "Maps a user to BPC/partner codes — SQL Server UM_UserPartnermapping" ;
+    sh:closed true ;
+    sh:ignoredProperties ( rdf:type ) ;
+    sh:property [ sh:datatype xsd:integer ;
+            sh:description "Business Partner Code — parent grouping above partnerCode (BIGINT in SQL)" ;
+            sh:maxCount 1 ;
+            sh:minCount 1 ;
+            sh:nodeKind sh:Literal ;
+            sh:order 2 ;
+            sh:path gep:bpc ],
+        [ sh:datatype xsd:integer ;
+            sh:description "Contact code for this partner mapping (BIGINT in SQL)" ;
+            sh:maxCount 1 ;
+            sh:nodeKind sh:Literal ;
+            sh:order 5 ;
+            sh:path gep:contactCode ],
+        [ sh:datatype xsd:integer ;
+            sh:description "Auto-increment integer primary key in SQL Server UM_Users" ;
+            sh:maxCount 1 ;
+            sh:minCount 1 ;
+            sh:nodeKind sh:Literal ;
+            sh:order 0 ;
+            sh:path gep:userId ],
+        [ sh:datatype xsd:integer ;
+            sh:description "Partner code — child code nested under a BPC group (INT in SQL)" ;
+            sh:maxCount 1 ;
+            sh:minCount 1 ;
+            sh:nodeKind sh:Literal ;
+            sh:order 3 ;
+            sh:path gep:partnerCode ],
+        [ sh:datatype xsd:integer ;
+            sh:description "SQL BIT — 1 means this partner mapping row is active (maps to SQL column isActive). Login blocked if no row with mappingIsActive=1 exists for the user." ;
+            sh:maxCount 1 ;
+            sh:maxInclusive 1 ;
+            sh:minInclusive 0 ;
+            sh:nodeKind sh:Literal ;
+            sh:order 4 ;
+            sh:path gep:mappingIsActive ],
+        [ sh:class gep:User ;
+            sh:description "OWL ObjectProperty — semantic link from PartnerMapping to its owning User. In SQL, resolved via the integer userId FK. Not stored as a URI in the database; used by OWL reasoners and the KG to traverse the relationship." ;
+            sh:maxCount 1 ;
+            sh:nodeKind sh:IRI ;
+            sh:order 1 ;
+            sh:path gep:hasUser ] ;
+    sh:targetClass gep:PartnerMapping .
 
 gep:User a sh:NodeShape ;
     rdfs:comment "Core user record from SQL Server UM_Users table" ;
     sh:closed true ;
     sh:ignoredProperties ( rdf:type ) ;
-    sh:property [ sh:datatype xsd:string ;
-            sh:description "User last name (SQL)" ;
+    sh:property [ sh:datatype xsd:integer ;
+            sh:description "SQL BIT — 0 means account is deactivated. Login is blocked when value = 0" ;
+            sh:maxCount 1 ;
+            sh:maxInclusive 1 ;
+            sh:minInclusive 0 ;
+            sh:nodeKind sh:Literal ;
+            sh:order 8 ;
+            sh:path gep:isActive ],
+        [ sh:datatype xsd:string ;
+            sh:description "International dialing code in SQL (e.g. +91, +1). Co-dependent with mobileNumber" ;
+            sh:maxCount 1 ;
+            sh:nodeKind sh:Literal ;
+            sh:order 11 ;
+            sh:path gep:isdCode ],
+        [ sh:datatype xsd:string ;
+            sh:description "User last name — stored in both SQL and MongoDB" ;
             sh:maxCount 1 ;
             sh:nodeKind sh:Literal ;
             sh:order 4 ;
             sh:path gep:lastName ],
         [ sh:datatype xsd:string ;
-            sh:description "Unique username. Primary cross-source link key to MongoDB users.userName" ;
-            sh:maxCount 1 ;
-            sh:minCount 1 ;
-            sh:nodeKind sh:Literal ;
-            sh:order 1 ;
-            sh:path gep:username ],
-        [ sh:datatype xsd:string ;
-            sh:description "International dialing code (e.g. +91, +1). Co-dependent with mobileNumber" ;
-            sh:maxCount 1 ;
-            sh:nodeKind sh:Literal ;
-            sh:order 8 ;
-            sh:path gep:isdCode ],
-        [ sh:datatype xsd:integer ;
-            sh:description "Auto-increment integer primary key in SQL Server UM_Users" ;
-            sh:maxCount 1 ;
-            sh:nodeKind sh:Literal ;
-            sh:order 0 ;
-            sh:path gep:userId ],
-        [ sh:datatype xsd:string ;
-            sh:description "User email address" ;
-            sh:maxCount 1 ;
-            sh:minCount 1 ;
-            sh:nodeKind sh:Literal ;
-            sh:order 2 ;
-            sh:path gep:emailAddress ;
-            sh:pattern "^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$" ],
-        [ sh:datatype xsd:string ;
-            sh:description "Mobile phone number (SQL). Co-dependent with isdCode" ;
-            sh:maxCount 1 ;
-            sh:nodeKind sh:Literal ;
-            sh:order 9 ;
-            sh:path gep:mobileNumber ],
-        [ sh:description "Authentication mechanism. Integer in both SQL and MongoDB. Validate: allowed values are 1 (Password) or 2 (SSO)." ;
-            sh:in ( "Password" "SSO" ) ;
-            sh:maxCount 1 ;
-            sh:minCount 1 ;
-            sh:order 5 ;
-            sh:path gep:authenticationType ],
-        [ sh:class gep:PartnerMapping ;
-            sh:description "OWL ObjectProperty — inverse of hasUser. Links a User to their PartnerMapping records. Used for KG traversal." ;
-            sh:nodeKind sh:IRI ;
-            sh:order 11 ;
-            sh:path gep:hasPartnerMappings ],
-        [ sh:datatype xsd:string ;
-            sh:description "User first name (SQL)" ;
+            sh:description "User first name — stored in both SQL and MongoDB" ;
             sh:maxCount 1 ;
             sh:nodeKind sh:Literal ;
             sh:order 3 ;
@@ -155,86 +282,101 @@ gep:User a sh:NodeShape ;
             sh:description "OWL ObjectProperty — semantic link from User to their MobileVerificationStatus. In SQL, resolved via the username FK. Used for OWL reasoning and KG traversal." ;
             sh:maxCount 1 ;
             sh:nodeKind sh:BlankNodeOrIRI ;
-            sh:order 10 ;
+            sh:order 13 ;
             sh:path gep:hasMobileVerificationStatus ],
         [ sh:datatype xsd:integer ;
-            sh:description "SQL BIT — 0 means account is deactivated. Login is blocked when value = 0" ;
+            sh:description "SQL BIT — 1 means this is an internal system or service account" ;
             sh:maxCount 1 ;
             sh:maxInclusive 1 ;
             sh:minInclusive 0 ;
             sh:nodeKind sh:Literal ;
-            sh:order 7 ;
-            sh:path gep:isActive ],
+            sh:order 10 ;
+            sh:path gep:isSystemUser ],
+        [ sh:datatype xsd:string ;
+            sh:description "User email address — stored in both SQL and MongoDB" ;
+            sh:maxCount 1 ;
+            sh:minCount 1 ;
+            sh:nodeKind sh:Literal ;
+            sh:order 2 ;
+            sh:path gep:emailAddress ;
+            sh:pattern "^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$" ],
+        [ sh:datatype xsd:string ;
+            sh:description "Mobile phone number in SQL. Co-dependent with isdCode" ;
+            sh:maxCount 1 ;
+            sh:nodeKind sh:Literal ;
+            sh:order 12 ;
+            sh:path gep:mobileNumber ],
+        [ sh:description "User category. Integer in both SQL and MongoDB. 0 = Buyer, 1 = Supplier." ;
+            sh:in ( "Buyer" "Supplier" ) ;
+            sh:maxCount 1 ;
+            sh:order 5 ;
+            sh:path gep:userType ],
+        [ sh:class gep:PartnerMapping ;
+            sh:description "OWL ObjectProperty — inverse of hasUser. Links a User to their PartnerMapping records. Used for KG traversal." ;
+            sh:nodeKind sh:BlankNodeOrIRI ;
+            sh:order 14 ;
+            sh:path gep:hasPartnerMappings ],
+        [ sh:datatype xsd:integer ;
+            sh:description "Auto-increment integer primary key in SQL Server UM_Users" ;
+            sh:maxCount 1 ;
+            sh:nodeKind sh:Literal ;
+            sh:order 0 ;
+            sh:path gep:userId ],
+        [ sh:datatype xsd:integer ;
+            sh:description "SQL BIT — 1 means account is soft-deleted. Login is blocked when value = 1" ;
+            sh:maxCount 1 ;
+            sh:maxInclusive 1 ;
+            sh:minInclusive 0 ;
+            sh:nodeKind sh:Literal ;
+            sh:order 9 ;
+            sh:path gep:isDeleted ],
+        [ sh:datatype xsd:string ;
+            sh:description "Unique username. Primary cross-source link key to MongoDB users.userName" ;
+            sh:maxCount 1 ;
+            sh:minCount 1 ;
+            sh:nodeKind sh:Literal ;
+            sh:order 1 ;
+            sh:path gep:username ],
+        [ sh:description "Authentication mechanism. Integer in both SQL and MongoDB. 1 = Non-SSO, 2 = SSO." ;
+            sh:in ( "NonSSO" "SSO" ) ;
+            sh:maxCount 1 ;
+            sh:minCount 1 ;
+            sh:order 6 ;
+            sh:path gep:authenticationType ],
         [ sh:datatype xsd:integer ;
             sh:description "SQL BIT — 1 means account is locked. Login is blocked when value = 1" ;
             sh:maxCount 1 ;
             sh:maxInclusive 1 ;
             sh:minInclusive 0 ;
             sh:nodeKind sh:Literal ;
-            sh:order 6 ;
+            sh:order 7 ;
             sh:path gep:isLocked ] ;
     sh:targetClass gep:User .
-
-gep:PartnerMapping a sh:NodeShape ;
-    rdfs:comment "Maps a user to BPC/partner codes — SQL Server Um_Userpartnermapping" ;
-    sh:closed true ;
-    sh:ignoredProperties ( rdf:type ) ;
-    sh:property [ sh:datatype xsd:string ;
-            sh:description "Partner code — child code nested under a BPC group" ;
-            sh:maxCount 1 ;
-            sh:minCount 1 ;
-            sh:nodeKind sh:Literal ;
-            sh:order 4 ;
-            sh:path gep:partnerCode ],
-        [ sh:datatype xsd:integer ;
-            sh:description "SQL BIT — marks the default partner mapping for this user. Exactly one row per userId must have isDefault=1." ;
-            sh:maxCount 1 ;
-            sh:maxInclusive 1 ;
-            sh:minInclusive 0 ;
-            sh:nodeKind sh:Literal ;
-            sh:order 6 ;
-            sh:path gep:isDefault ],
-        [ sh:class gep:User ;
-            sh:description "OWL ObjectProperty — semantic link from PartnerMapping to its owning User. In SQL, resolved via the integer userId FK. Not stored as a URI in the database; used by OWL reasoners and the KG to traverse the relationship." ;
-            sh:maxCount 1 ;
-            sh:nodeKind sh:IRI ;
-            sh:order 2 ;
-            sh:path gep:hasUser ],
-        [ sh:datatype xsd:string ;
-            sh:description "Synthetic composite key for PartnerMapping. Generated as '{userId}_{bpc}_{partnerCode}'. Required because LinkML does not support composite identifiers natively." ;
-            sh:maxCount 1 ;
-            sh:nodeKind sh:Literal ;
-            sh:order 0 ;
-            sh:path gep:mappingId ],
-        [ sh:datatype xsd:string ;
-            sh:description "Business Partner Code — parent grouping above partnerCode" ;
-            sh:maxCount 1 ;
-            sh:minCount 1 ;
-            sh:nodeKind sh:Literal ;
-            sh:order 3 ;
-            sh:path gep:bpc ],
-        [ sh:datatype xsd:integer ;
-            sh:description "Auto-increment integer primary key in SQL Server UM_Users" ;
-            sh:maxCount 1 ;
-            sh:minCount 1 ;
-            sh:nodeKind sh:Literal ;
-            sh:order 1 ;
-            sh:path gep:userId ],
-        [ sh:datatype xsd:integer ;
-            sh:description "SQL BIT — 1 means this partner mapping row is active. Login blocked if no row with mappingIsActive=1 exists for the user." ;
-            sh:maxCount 1 ;
-            sh:maxInclusive 1 ;
-            sh:minInclusive 0 ;
-            sh:nodeKind sh:Literal ;
-            sh:order 5 ;
-            sh:path gep:mappingIsActive ] ;
-    sh:targetClass gep:PartnerMapping .
 
 
 
 # ════════════════════════════════════════════════
 # CUSTOM SHAPES (injected by gen_shacl.py)
 # ════════════════════════════════════════════════
+
+gep:BuyerSSOShape a sh:NodeShape ;
+    sh:targetClass gep:User ;
+    sh:sparql [
+        sh:message "Buyer SSO user. Login blocked — Buyer SSO accounts use a separate authentication path." ;
+        sh:prefixes [
+            sh:declare [
+                sh:prefix "gep" ;
+                sh:namespace "http://gep.com/ontology/login#" ;
+            ]
+        ] ;
+        sh:select """
+          PREFIX gep: <http://gep.com/ontology/login#> SELECT $this WHERE {
+            $this gep:userType 0 ;
+                  gep:authenticationType 2 .
+          }
+        """ ;
+    ] .
+
 
 gep:PartnerMappingShape a sh:NodeShape ;
     sh:targetClass gep:PartnerMapping ;
@@ -243,11 +385,11 @@ gep:PartnerMappingShape a sh:NodeShape ;
         sh:prefixes [
             sh:declare [
                 sh:prefix "gep" ;
-                sh:namespace "https://gep.com/ontology/login#" ;
+                sh:namespace "http://gep.com/ontology/login#" ;
             ]
         ] ;
         sh:select """
-          PREFIX gep: <https://gep.com/ontology/login#> SELECT $this WHERE {
+          PREFIX gep: <http://gep.com/ontology/login#> SELECT $this WHERE {
             $this gep:userId ?uid .
             FILTER NOT EXISTS {
               ?m gep:userId ?uid ;
@@ -258,26 +400,26 @@ gep:PartnerMappingShape a sh:NodeShape ;
     ] .
 
 
-gep:DefaultPartnerShape a sh:NodeShape ;
-    sh:targetClass gep:PartnerMapping ;
+gep:SupplierPartnerMappingShape a sh:NodeShape ;
+    sh:targetClass gep:User ;
     sh:sparql [
-        sh:message "User must have exactly one default partner mapping (isDefault=1)." ;
+        sh:message "Supplier user has no active partner mapping with a valid (non-zero) BPC. Login and system email notifications are blocked." ;
         sh:prefixes [
             sh:declare [
                 sh:prefix "gep" ;
-                sh:namespace "https://gep.com/ontology/login#" ;
+                sh:namespace "http://gep.com/ontology/login#" ;
             ]
         ] ;
         sh:select """
-          PREFIX gep: <https://gep.com/ontology/login#> SELECT $this WHERE {
-            $this gep:userId ?uid .
-            {
-              SELECT ?uid (COUNT(?d) AS ?cnt) WHERE {
-                ?d gep:userId ?uid ;
-                   gep:isDefault 1 .
-              } GROUP BY ?uid
+          PREFIX gep: <http://gep.com/ontology/login#> SELECT $this WHERE {
+            $this gep:userType 1 ;
+                  gep:userId ?uid .
+            FILTER NOT EXISTS {
+              ?m gep:userId ?uid ;
+                 gep:mappingIsActive 1 ;
+                 gep:bpc ?bpc .
+              FILTER (?bpc != 0)
             }
-            FILTER (?cnt != 1)
           }
         """ ;
     ] .
@@ -287,8 +429,19 @@ gep:DefaultPartnerShape a sh:NodeShape ;
 # Shape ID   : gep:MobileConsistencyShape
 # Implemented: mcp_server.tools.validate_data.MobileConsistencyValidator
 # Logic      :
-#   1. Fetch MobileVerificationStatus.isMobileNumberVerifiedSQL for the user (SQL BIT). 2. Normalize SQL BIT: 0→False, 1→True. 3. Fetch UserDocument.isMobileNumberVerifiedMongo for the user (MongoDB boolean). 4. Compare normalized values. If different → violation.
+#   1. Fetch MobileVerificationStatus.isMobileNumberVerified for the user (SQL BIT). 2. Normalize SQL BIT: 0→False, 1→True. 3. Fetch UserDocument.isMobileNumberVerifiedMongo for the user (MongoDB boolean). 4. Compare normalized values. If different → violation.
 #
 gep:MobileConsistencyShape a sh:NodeShape ;
     rdfs:comment "CUSTOM_PYTHON: mcp_server.tools.validate_data.MobileConsistencyValidator" ;
     sh:message "Mobile verification mismatch for '{username}': SQL={source_a_value}, MongoDB={source_b_value}." .
+
+
+# ── Custom Python Shape (not executable SHACL) ──────────────
+# Shape ID   : gep:PartnerMappingDataSyncShape
+# Implemented: mcp_server.tools.validate_data.PartnerMappingDataSyncValidator
+# Logic      :
+#   1. Fetch all PartnerMapping rows from SQL for the user (bpc, partnerCode, mappingIsActive, contactCode). 2. Fetch userPartnerMappings array from MongoDB for the user. 3. Match pairs by composite key (bpc + partnerCode). 4. For each matched pair: compare mappingIsActive, contactCode, bpc, partnerCode. 5. Normalize SQL BIT mappingIsActive: 0→false, 1→true before comparing MongoDB boolean isActive. 6. Report any field that diverges between SQL and MongoDB for the same (bpc, partnerCode) pair.
+#
+gep:PartnerMappingDataSyncShape a sh:NodeShape ;
+    rdfs:comment "CUSTOM_PYTHON: mcp_server.tools.validate_data.PartnerMappingDataSyncValidator" ;
+    sh:message "Partner mapping data sync issue for user '{username}': ({bpc}, {partnerCode}) — SQL={source_a_value}, MongoDB={source_b_value}." .

@@ -1,4 +1,4 @@
-@prefix gep: <https://gep.com/ontology/login#> .
+@prefix gep: <http://gep.com/ontology/login#> .
 @prefix owl: <http://www.w3.org/2002/07/owl#> .
 @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
 @prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
@@ -7,45 +7,118 @@ gep:action a owl:DatatypeProperty ;
     rdfs:label "Action"@en ;
     rdfs:range xsd:string .
 
-gep:dr_001 a owl:NamedIndividual,
-        gep:DecisionRule ;
+gep:dr_001 a gep:DecisionRule,
+        owl:NamedIndividual ;
     rdfs:label "EscalateToNewRelic"@en ;
-    rdfs:comment "When all SHACL shapes pass (user data looks correct in both SQL and MongoDB), escalate to New Relic to find a runtime or infrastructure root cause."@en ;
     gep:action "query_newrelic"^^xsd:string ;
-    gep:nrqlTemplate "SELECT * FROM Log WHERE username = '{username}' SINCE 1 hour ago"^^xsd:string ;
-    gep:rulePriority 1 ;
-    gep:triggerType "ALL_SHAPES_PASS"^^xsd:string .
+    gep:nrqlTemplate "SELECT * FROM Log WHERE username = '{username}' SINCE 7 days ago LIMIT MAX"^^xsd:string ;
+    gep:rulePriority 99 ;
+    gep:triggerType "ALL_SHAPES_PASS"^^xsd:string ;
+    rdfs:comment "Generic fallback: when all SHACL shapes pass and no intent-specific New Relic rule applies (dr_010, dr_011), query New Relic Log table for general activity. Intent-specific rules (dr_010 for MFA/login, dr_011 for reset password) take precedence over this rule when their applies_to_intents match. Max lookback: 7 days. Ask for username/email if not already provided."@en .
 
-gep:dr_002 a owl:NamedIndividual,
-        gep:DecisionRule ;
+gep:dr_002 a gep:DecisionRule,
+        owl:NamedIndividual ;
     rdfs:label "ReportMobileVerificationMismatch"@en ;
-    rdfs:comment "When SQL ismobilenumberverified and MongoDB ismobileNumberVerified diverge, report the data sync issue directly. Do not escalate to New Relic."@en ;
     gep:action "report_mismatch"^^xsd:string ;
-    gep:involvedField gep:isMobileNumberVerifiedMongo,
-        gep:isMobileNumberVerifiedSQL ;
-    gep:messageTemplate "Data sync issue for user '{username}': SQL isMobileNumberVerified={sql_value}, MongoDB ismobileNumberVerified={mongo_value}."^^xsd:string ;
-    gep:rulePriority 2 ;
-    gep:triggerType "CROSS_SOURCE_MISMATCH"^^xsd:string .
+    gep:involvedField gep:isMobileNumberVerified,
+        gep:isMobileNumberVerifiedMongo ;
+    gep:rulePriority 99 ;
+    gep:targetShape gep:MobileConsistencyShape ;
+    gep:triggerType "SHAPE_VIOLATION"^^xsd:string ;
+    rdfs:comment "When MobileConsistencyShape fails (SQL isMobileNumberVerified and MongoDB isMobileNumberVerified diverge), report the data sync issue directly."@en .
 
-gep:dr_003 a owl:NamedIndividual,
-        gep:DecisionRule ;
+gep:dr_003 a gep:DecisionRule,
+        owl:NamedIndividual ;
     rdfs:label "ReportLoginBlocked"@en ;
-    rdfs:comment "When LoginBlockShape fails (account locked or deactivated), report the specific reason. Do not escalate to New Relic."@en ;
     gep:action "report_block_reason"^^xsd:string ;
-    gep:messageTemplate "Login blocked for '{username}': {violation_message}"^^xsd:string ;
-    gep:rulePriority 3 ;
+    gep:rulePriority 99 ;
     gep:targetShape gep:LoginBlockShape ;
-    gep:triggerType "SHAPE_VIOLATION"^^xsd:string .
+    gep:triggerType "SHAPE_VIOLATION"^^xsd:string ;
+    rdfs:comment "When LoginBlockShape fails (account locked, deactivated, or deleted), report the specific reason. Do not escalate to New Relic."@en .
 
-gep:dr_004 a owl:NamedIndividual,
-        gep:DecisionRule ;
+gep:dr_004 a gep:DecisionRule,
+        owl:NamedIndividual ;
     rdfs:label "ReportNoActivePartnerMapping"@en ;
-    rdfs:comment "When PartnerMappingShape fails (no active partner mapping row exists), report missing partner mapping. Do not escalate to New Relic."@en ;
     gep:action "report_block_reason"^^xsd:string ;
-    gep:messageTemplate "Login blocked for '{username}': No active partner mapping found."^^xsd:string ;
-    gep:rulePriority 4 ;
+    gep:rulePriority 99 ;
     gep:targetShape gep:PartnerMappingShape ;
-    gep:triggerType "SHAPE_VIOLATION"^^xsd:string .
+    gep:triggerType "SHAPE_VIOLATION"^^xsd:string ;
+    rdfs:comment "When PartnerMappingShape fails (no active partner mapping row exists for any user), report missing partner mapping."@en .
+
+gep:dr_005 a gep:DecisionRule,
+        owl:NamedIndividual ;
+    rdfs:label "ReportSystemUserBlocked"@en ;
+    gep:action "report_block_reason"^^xsd:string ;
+    gep:rulePriority 99 ;
+    gep:targetShape gep:SystemUserShape ;
+    gep:triggerType "SHAPE_VIOLATION"^^xsd:string ;
+    rdfs:comment "When SystemUserShape fails (isSystemUser=1), report that system accounts cannot login via the user-facing login flow."@en .
+
+gep:dr_006 a gep:DecisionRule,
+        owl:NamedIndividual ;
+    rdfs:label "ReportBuyerSSOBlocked"@en ;
+    gep:action "report_block_reason"^^xsd:string ;
+    gep:rulePriority 99 ;
+    gep:targetShape gep:BuyerSSOShape ;
+    gep:triggerType "SHAPE_VIOLATION"^^xsd:string ;
+    rdfs:comment "When BuyerSSOShape fails (userType=Buyer AND authenticationType=SSO), report that Buyer SSO users cannot login via standard authentication."@en .
+
+gep:dr_007 a gep:DecisionRule,
+        owl:NamedIndividual ;
+    rdfs:label "ReportSupplierNoValidPartner"@en ;
+    gep:action "report_block_reason"^^xsd:string ;
+    gep:rulePriority 99 ;
+    gep:targetShape gep:SupplierPartnerMappingShape ;
+    gep:triggerType "SHAPE_VIOLATION"^^xsd:string ;
+    rdfs:comment "When SupplierPartnerMappingShape fails (Supplier with no active partner mapping with non-zero BPC), report invalid partner configuration. Supplier cannot login or receive any system emails."@en .
+
+gep:dr_008 a gep:DecisionRule,
+        owl:NamedIndividual ;
+    rdfs:label "ReportPartnerMappingDataMismatch"@en ;
+    gep:action "report_mismatch"^^xsd:string ;
+    gep:involvedField gep:bpc,
+        gep:contactCode,
+        gep:mappingIsActive,
+        gep:partnerCode ;
+    gep:rulePriority 99 ;
+    gep:targetShape gep:PartnerMappingDataSyncShape ;
+    gep:triggerType "SHAPE_VIOLATION"^^xsd:string ;
+    rdfs:comment "When PartnerMappingDataSyncShape fails (SQL UM_UserPartnermapping and MongoDB userPartnerMappings are out of sync), report the data sync issue. Fields compared: isActive, contactCode, bpc, partnerCode (userId excluded)."@en .
+
+gep:dr_009 a gep:DecisionRule,
+        owl:NamedIndividual ;
+    rdfs:label "SendLockEmail"@en ;
+    gep:action "check_and_send_lock_email"^^xsd:string ;
+    gep:rulePriority 99 ;
+    gep:targetShape gep:LoginBlockShape ;
+    gep:triggerType "SHAPE_VIOLATION"^^xsd:string ;
+    rdfs:comment "DEFERRED — requires EmailTemplate entity (table structure TBD with user). When account is locked (LoginBlockShape isLocked=1) AND the lock email template is active on the user's domain, trigger send_lock_email action so the user can receive a link to reset their password."@en .
+
+gep:dr_010 a gep:DecisionRule,
+        owl:NamedIndividual ;
+    rdfs:label "DiagnoseLoginMFAViaNewRelic"@en ;
+    gep:action "query_newrelic_2step"^^xsd:string ;
+    gep:rulePriority 99 ;
+    gep:triggerType "ALL_SHAPES_PASS"^^xsd:string ;
+    rdfs:comment "When all shapes pass for login or OTP intents, query New Relic Transaction table for /Account/Login URI to get RequiresTwoFactor and TwoFactorDetails, then query Log table by traceId for OTP delivery status, domain, and SMS reason. Max lookback: 7 days. Ask for username/email if not already provided."@en .
+
+gep:dr_011 a gep:DecisionRule,
+        owl:NamedIndividual ;
+    rdfs:label "DiagnoseResetPasswordViaNewRelic"@en ;
+    gep:action "query_newrelic_2step"^^xsd:string ;
+    gep:rulePriority 99 ;
+    gep:triggerType "ALL_SHAPES_PASS"^^xsd:string ;
+    rdfs:comment "When all shapes pass for reset password or OTP email intents, query New Relic Transaction table for all three reset password URIs (/Account/RecoverPassword, /Account/PreResetPassword, /Account/ResetPassword) to trace the full reset flow, then query Log table by traceId for email delivery status and failure reasons. Max lookback: 7 days. Ask for username/email if not already provided."@en .
+
+gep:dr_012 a gep:DecisionRule,
+        owl:NamedIndividual ;
+    rdfs:label "ReportEmailMismatch"@en ;
+    gep:action "report_email_mismatch_advisory"^^xsd:string ;
+    gep:involvedField gep:emailAddress,
+        gep:input_identifier ;
+    gep:rulePriority 99 ;
+    gep:triggerType "EMAIL_INPUT_MISMATCH"^^xsd:string ;
+    rdfs:comment "ADVISORY (not a login block). When the identifier the user provided is an email address that does NOT match the registered emailAddress on the account, surface the mismatch. A password reset / OTP email would be delivered to the REGISTERED address, not the queried one. The user may be asking about the wrong account, or the registered email may be outdated. Only fires when the provided identifier contains '@' (looks like an email); a username that legitimately differs from the email does not trigger this."@en .
 
 gep:involvedField a owl:ObjectProperty ;
     rdfs:label "Involved Field"@en .

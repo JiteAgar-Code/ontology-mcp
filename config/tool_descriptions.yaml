@@ -1,0 +1,177 @@
+# config/tool_descriptions.yaml
+#
+# Single source of truth for every MCP tool and server description.
+# Referenced by src/mcp_server/tool_meta.py — never write descriptions inline
+# in server.py or diagnostic_server.py.
+#
+# Format:
+#   <server_key>:
+#     server:
+#       description: <str>
+#     tools:
+#       <tool_name>:
+#         description: <str>
+
+# ─────────────────────────────────────────────────────────────────────────────
+# ontology-mcp  —  Knowledge Graph / Semantic Descriptor Service
+# ─────────────────────────────────────────────────────────────────────────────
+
+ontology_mcp:
+
+  server:
+    description: >-
+      Diagnosis-planning service for login issues.
+      You classify the user's complaint into a category yourself (LLM-native —
+      no tool call for that). Then call get_diagnosis_plan(category) ONCE to get
+      the playbook: which entities to fetch, which SHACL shapes to validate,
+      which datasources to query, and which New Relic tool to escalate to.
+      Always get a plan here BEFORE any data-mcp tool.
+
+  tools:
+
+    get_diagnosis_plan:
+      description: >-
+        STEP 0 — MANDATORY FIRST CALL for every login diagnostic request.
+        Do NOT call any data-mcp tool until this returns a capability_id.
+
+        You determine the issue category yourself from the user's message — do
+        NOT call any tool for intent detection. Then call this ONCE with that
+        category to get the diagnosis playbook.
+
+        Valid categories:
+          login_failure   — cannot login / authenticate / access the app, SSO failure
+          password_reset  — reset link or forgot-password email not received
+          otp_email       — OTP email not received during reset
+          sms_otp         — SMS OTP not received (mobile verified)
+          account_state   — account deactivated / inactive / suspended
+          account_locked  — account locked after failed attempts
+          partner_mapping — missing / inactive partner (BPC) mapping
+          data_sync       — SQL vs MongoDB field mismatch
+
+        Returns: capability_id (pass to every data-mcp tool), required_entities,
+        validation_sequence, datasources, newrelic_tool, required_parameters.
+        If the category is unknown, returns matched=false with the available
+        categories — pick the closest and call again.
+
+    list_capabilities:
+      description: >-
+        List all supported diagnosis categories with descriptions and `covers`
+        examples. Call this ONLY when you genuinely cannot classify the user's
+        complaint into a category — NOT on every query. `covers` is descriptive
+        metadata; do not string-match against it — reason about the best fit,
+        then call get_diagnosis_plan once.
+
+    get_entity_descriptor:
+      description: >-
+        Get the full physical descriptor for a specific entity class from the KG.
+        Returns datasource, table/collection, link key, primary key, and all
+        property mappings (SQL column, MongoDB field, type, cross-source links).
+        Valid class names: User, PartnerMapping, MobileVerificationStatus, UserDocument.
+
+# ─────────────────────────────────────────────────────────────────────────────
+# data-mcp  —  Live Data Execution Service
+# ─────────────────────────────────────────────────────────────────────────────
+
+data_mcp:
+
+  server:
+    description: >-
+      Live data execution service for login diagnostics.
+      Executes the diagnosis plan returned by ontology-mcp/get_diagnosis_plan against
+      real data: SQL Server, MongoDB, SHACL shape validation, and New Relic NRQL.
+      IMPORTANT — All tools require a capability_id obtained from
+      ontology-mcp/get_diagnosis_plan. Calling these tools without a valid
+      capability_id returns an error directing you to get a plan first.
+
+  tools:
+
+    query_sql_user:
+      description: >-
+        STEP 1a — Requires capability_id from ontology-mcp/get_diagnosis_plan.
+        Returns an error if capability_id is absent — get a plan first.
+
+        Query SQL Server UM_Users table for the given username.
+        Returns: userid, username, emailaddress, usertype, authenticationtype,
+                 islocked, isactive, isdeleted, issystemuser, isdcode, mobileno.
+        Also returns the exact SELECT statement executed.
+
+    query_sql_mobile_verification:
+      description: >-
+        STEP 1b — Requires capability_id from ontology-mcp/get_diagnosis_plan.
+        Returns an error if capability_id is absent — get a plan first.
+
+        Query SQL Server UM_UserMobileNumberVerified table.
+        Returns ismobilenumberverified (BIT: 0 = not verified, 1 = verified).
+        Cross-checked against MongoDB isMobileNumberVerified in shape validation.
+
+    query_sql_partner_mappings:
+      description: >-
+        STEP 1c — Requires capability_id from ontology-mcp/get_diagnosis_plan.
+        Returns an error if capability_id is absent — get a plan first.
+
+        Query SQL Server UM_UserPartnermapping for all rows of the given user.
+        Returns: userid, bpc, partnercode, isactive, contactcode per row,
+                 plus total row count and active row count.
+        Login is blocked when active count = 0 (no row where isactive = 1).
+
+    query_mongo_user:
+      description: >-
+        STEP 1d — Requires capability_id from ontology-mcp/get_diagnosis_plan.
+        Returns an error if capability_id is absent — get a plan first.
+
+        Query MongoDB users collection for the given username.
+        Fetches exactly 9 diagnostic fields (projected — no display-only fields):
+          userName, emailAddress, userType, authenticationType, isActive,
+          isLocked, isSystemUser, isMobileNumberVerified, userPartnerMappings.
+        Lookup by userName or normalizedUserName. Shows the exact query executed.
+
+    validate_login_shapes:
+      description: >-
+        STEP 2 — Requires capability_id from ontology-mcp/get_diagnosis_plan.
+        Returns an error if capability_id is absent — get a plan first.
+
+        Evaluate SHACL shapes against live SQL + MongoDB data.
+        Pass validation_sequence from get_diagnosis_plan to run only the
+        plan-relevant shapes. Shapes:
+          LoginBlockShape             isLocked=1 OR isActive=0 OR isDeleted=1
+          SystemUserShape             isSystemUser=1
+          BuyerSSOShape               userType=Buyer AND authenticationType=SSO
+          PartnerMappingShape         no active partner mapping row
+          SupplierPartnerMappingShape supplier with no valid BPC
+          EmailVerificationShape      no valid registered email (reset/OTP flows)
+          MobileConsistencyShape      SQL vs MongoDB isMobileNumberVerified mismatch
+          PartnerMappingDataSyncShape SQL vs MongoDB partner mapping data mismatch
+        Also returns an `advisories` list (e.g. dr_012 email mismatch) — report
+        these alongside findings; they do NOT affect all_shapes_pass.
+        If all_shapes_pass=true AND the plan's newrelic_tool is not null, proceed
+        to Step 3. If violations found, report them using the mapped rule.
+
+    query_newrelic_login_mfa:
+      description: >-
+        STEP 3a — Requires capability_id from ontology-mcp/get_diagnosis_plan.
+        Returns an error if capability_id is absent — get a plan first.
+        Call ONLY when validate_login_shapes returns all_shapes_pass=true
+        AND the plan's newrelic_tool is query_newrelic_login_mfa
+        (categories: login_failure, sms_otp).
+
+        Two-step New Relic query for login/MFA/SMS OTP issues (dr_010).
+        Step 1 — Transaction table, URI=/Account/Login:
+                 LoginUserName, traceId, RequiresTwoFactor, TwoFactorDetails.
+        Step 2 — Log table WHERE trace.id = traceId:
+                 domain, failureReason, smsReason.
+        Max lookback: 7 days. appName filtered by APP_ENV environment variable.
+
+    query_newrelic_reset_password:
+      description: >-
+        STEP 3b — Requires capability_id from ontology-mcp/get_diagnosis_plan.
+        Returns an error if capability_id is absent — get a plan first.
+        Call ONLY when validate_login_shapes returns all_shapes_pass=true
+        AND the plan's newrelic_tool is query_newrelic_reset_password
+        (categories: password_reset, otp_email).
+
+        Two-step New Relic query across 3 reset-password URIs (dr_011):
+          /Account/RecoverPassword   traceId, errorMessage, RecoveryUserName, RecoveryEmail
+          /Account/PreResetPassword  traceId, errorMessage, PreResetUserName
+          /Account/ResetPassword     LoginUserName, traceId, errorMessage
+        Per traceId: Log table queried for full failure detail.
+        Max lookback: 7 days. appName filtered by APP_ENV environment variable.

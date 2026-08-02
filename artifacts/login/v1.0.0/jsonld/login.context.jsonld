@@ -1,148 +1,217 @@
 {
   "@context": {
     "@version": 1.1,
-    "gep": "https://gep.com/ontology/login#",
+    "gep": "http://gep.com/ontology/login#",
     "xsd": "http://www.w3.org/2001/XMLSchema#",
     "skos": "http://www.w3.org/2004/02/skos/core#",
     "owl": "http://www.w3.org/2002/07/owl#",
     "rdfs": "http://www.w3.org/2000/01/rdf-schema#",
     "AbstractUser": {
-      "@id": "https://gep.com/ontology/login#AbstractUser",
+      "@id": "http://gep.com/ontology/login#AbstractUser",
       "@type": "@id"
     },
     "User": {
-      "@id": "https://gep.com/ontology/login#User",
+      "@id": "http://gep.com/ontology/login#User",
       "@type": "@id"
     },
     "PartnerMapping": {
-      "@id": "https://gep.com/ontology/login#PartnerMapping",
+      "@id": "http://gep.com/ontology/login#PartnerMapping",
       "@type": "@id"
     },
     "MobileVerificationStatus": {
-      "@id": "https://gep.com/ontology/login#MobileVerificationStatus",
+      "@id": "http://gep.com/ontology/login#MobileVerificationStatus",
+      "@type": "@id"
+    },
+    "IsdCode": {
+      "@id": "http://gep.com/ontology/login#IsdCode",
+      "@type": "@id"
+    },
+    "MongoPartnerMapping": {
+      "@id": "http://gep.com/ontology/login#MongoPartnerMapping",
       "@type": "@id"
     },
     "UserDocument": {
-      "@id": "https://gep.com/ontology/login#UserDocument",
+      "@id": "http://gep.com/ontology/login#UserDocument",
       "@type": "@id"
     },
     "hasUser": {
-      "@id": "https://gep.com/ontology/login#hasUser"
+      "@id": "http://gep.com/ontology/login#hasUser"
     },
     "hasPartnerMappings": {
-      "@id": "https://gep.com/ontology/login#hasPartnerMappings",
+      "@id": "http://gep.com/ontology/login#hasPartnerMappings",
       "@container": "@set"
     },
     "hasMobileVerificationStatus": {
-      "@id": "https://gep.com/ontology/login#hasMobileVerificationStatus"
-    },
-    "mappingId": {
-      "@id": "https://gep.com/ontology/login#mappingId",
-      "@type": "xsd:string"
+      "@id": "http://gep.com/ontology/login#hasMobileVerificationStatus"
     },
     "userId": {
-      "@id": "https://gep.com/ontology/login#userId",
+      "@id": "http://gep.com/ontology/login#userId",
       "@type": "xsd:integer"
     },
     "username": {
-      "@id": "https://gep.com/ontology/login#username",
+      "@id": "http://gep.com/ontology/login#username",
       "@type": "xsd:string"
     },
     "emailAddress": {
-      "@id": "https://gep.com/ontology/login#emailAddress",
+      "@id": "http://gep.com/ontology/login#emailAddress",
       "@type": "xsd:string"
     },
     "firstName": {
-      "@id": "https://gep.com/ontology/login#firstName",
+      "@id": "http://gep.com/ontology/login#firstName",
       "@type": "xsd:string"
     },
     "lastName": {
-      "@id": "https://gep.com/ontology/login#lastName",
+      "@id": "http://gep.com/ontology/login#lastName",
       "@type": "xsd:string"
     },
+    "userType": {
+      "@id": "http://gep.com/ontology/login#userType"
+    },
     "authenticationType": {
-      "@id": "https://gep.com/ontology/login#authenticationType"
+      "@id": "http://gep.com/ontology/login#authenticationType"
     },
     "isLocked": {
-      "@id": "https://gep.com/ontology/login#isLocked",
+      "@id": "http://gep.com/ontology/login#isLocked",
       "@type": "xsd:integer"
     },
     "isActive": {
-      "@id": "https://gep.com/ontology/login#isActive",
+      "@id": "http://gep.com/ontology/login#isActive",
+      "@type": "xsd:integer"
+    },
+    "isDeleted": {
+      "@id": "http://gep.com/ontology/login#isDeleted",
+      "@type": "xsd:integer"
+    },
+    "isSystemUser": {
+      "@id": "http://gep.com/ontology/login#isSystemUser",
       "@type": "xsd:integer"
     },
     "isdCode": {
-      "@id": "https://gep.com/ontology/login#isdCode",
+      "@id": "http://gep.com/ontology/login#isdCode",
       "@type": "xsd:string"
     },
     "mobileNumber": {
-      "@id": "https://gep.com/ontology/login#mobileNumber",
+      "@id": "http://gep.com/ontology/login#mobileNumber",
       "@type": "xsd:string"
     },
     "bpc": {
-      "@id": "https://gep.com/ontology/login#bpc",
-      "@type": "xsd:string"
+      "@id": "http://gep.com/ontology/login#bpc",
+      "@type": "xsd:integer"
     },
     "partnerCode": {
-      "@id": "https://gep.com/ontology/login#partnerCode",
-      "@type": "xsd:string"
+      "@id": "http://gep.com/ontology/login#partnerCode",
+      "@type": "xsd:integer"
     },
     "mappingIsActive": {
-      "@id": "https://gep.com/ontology/login#mappingIsActive",
+      "@id": "http://gep.com/ontology/login#mappingIsActive",
       "@type": "xsd:integer"
     },
-    "isDefault": {
-      "@id": "https://gep.com/ontology/login#isDefault",
+    "contactCode": {
+      "@id": "http://gep.com/ontology/login#contactCode",
       "@type": "xsd:integer"
     },
-    "isMobileNumberVerifiedSQL": {
-      "@id": "https://gep.com/ontology/login#isMobileNumberVerifiedSQL",
+    "isMobileNumberVerified": {
+      "@id": "http://gep.com/ontology/login#isMobileNumberVerified",
       "@type": "xsd:integer"
     },
     "userName": {
-      "@id": "https://gep.com/ontology/login#userName",
+      "@id": "http://gep.com/ontology/login#userName",
       "@type": "xsd:string"
     },
     "normalizedUserName": {
-      "@id": "https://gep.com/ontology/login#normalizedUserName",
+      "@id": "http://gep.com/ontology/login#normalizedUserName",
       "@type": "xsd:string"
     },
-    "mongoFirstName": {
-      "@id": "https://gep.com/ontology/login#mongoFirstName",
+    "normalizedEmailAddress": {
+      "@id": "http://gep.com/ontology/login#normalizedEmailAddress",
       "@type": "xsd:string"
     },
-    "mongoLastName": {
-      "@id": "https://gep.com/ontology/login#mongoLastName",
+    "normalizedFirstName": {
+      "@id": "http://gep.com/ontology/login#normalizedFirstName",
+      "@type": "xsd:string"
+    },
+    "normalizedLastName": {
+      "@id": "http://gep.com/ontology/login#normalizedLastName",
+      "@type": "xsd:string"
+    },
+    "normalizedFullName": {
+      "@id": "http://gep.com/ontology/login#normalizedFullName",
+      "@type": "xsd:string"
+    },
+    "mongoIsActive": {
+      "@id": "http://gep.com/ontology/login#mongoIsActive",
+      "@type": "xsd:boolean"
+    },
+    "mongoIsLocked": {
+      "@id": "http://gep.com/ontology/login#mongoIsLocked",
+      "@type": "xsd:boolean"
+    },
+    "mongoIsSystemUser": {
+      "@id": "http://gep.com/ontology/login#mongoIsSystemUser",
+      "@type": "xsd:boolean"
+    },
+    "mongoIsdCode": {
+      "@id": "http://gep.com/ontology/login#mongoIsdCode"
+    },
+    "mobileNo": {
+      "@id": "http://gep.com/ontology/login#mobileNo",
       "@type": "xsd:string"
     },
     "isMobileNumberVerifiedMongo": {
-      "@id": "https://gep.com/ontology/login#isMobileNumberVerifiedMongo",
+      "@id": "http://gep.com/ontology/login#isMobileNumberVerifiedMongo",
       "@type": "xsd:boolean"
     },
-    "mongoAuthenticationType": {
-      "@id": "https://gep.com/ontology/login#mongoAuthenticationType"
-    },
-    "mongoIsdCode": {
-      "@id": "https://gep.com/ontology/login#mongoIsdCode",
-      "@type": "xsd:string"
-    },
-    "mobileNo": {
-      "@id": "https://gep.com/ontology/login#mobileNo",
-      "@type": "xsd:string"
-    },
-    "userPartnerMapping": {
-      "@id": "https://gep.com/ontology/login#userPartnerMapping",
+    "userPartnerMappings": {
+      "@id": "http://gep.com/ontology/login#userPartnerMappings",
       "@container": "@set"
     },
+    "isdCountryCode": {
+      "@id": "http://gep.com/ontology/login#isdCountryCode",
+      "@type": "xsd:string"
+    },
+    "isdExtension": {
+      "@id": "http://gep.com/ontology/login#isdExtension",
+      "@type": "xsd:string"
+    },
+    "mongoMappingUserId": {
+      "@id": "http://gep.com/ontology/login#mongoMappingUserId",
+      "@type": "xsd:string"
+    },
+    "mongoBpc": {
+      "@id": "http://gep.com/ontology/login#mongoBpc",
+      "@type": "xsd:integer"
+    },
+    "mongoPartnerCode": {
+      "@id": "http://gep.com/ontology/login#mongoPartnerCode",
+      "@type": "xsd:integer"
+    },
+    "mongoMappingIsActive": {
+      "@id": "http://gep.com/ontology/login#mongoMappingIsActive",
+      "@type": "xsd:boolean"
+    },
+    "mongoContactCode": {
+      "@id": "http://gep.com/ontology/login#mongoContactCode",
+      "@type": "xsd:string"
+    },
     "AuthenticationTypeEnum": {
-      "@id": "https://gep.com/ontology/login#AuthenticationTypeEnum",
+      "@id": "http://gep.com/ontology/login#AuthenticationTypeEnum",
       "@type": "@id"
     },
-    "Password": {
-      "@id": "https://gep.com/ontology/login#Password"
+    "NonSSO": {
+      "@id": "http://gep.com/ontology/login#NonSSO"
     },
     "SSO": {
-      "@id": "https://gep.com/ontology/login#SSO"
+      "@id": "http://gep.com/ontology/login#SSO"
+    },
+    "UserTypeEnum": {
+      "@id": "http://gep.com/ontology/login#UserTypeEnum",
+      "@type": "@id"
+    },
+    "Buyer": {
+      "@id": "http://gep.com/ontology/login#Buyer"
+    },
+    "Supplier": {
+      "@id": "http://gep.com/ontology/login#Supplier"
     }
   }
 }

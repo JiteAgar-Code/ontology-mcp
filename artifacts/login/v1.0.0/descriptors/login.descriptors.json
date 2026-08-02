@@ -1,7 +1,7 @@
 {
   "schema": "login",
   "version": "1.0.0",
-  "namespace": "https://gep.com/ontology/login#",
+  "namespace": "http://gep.com/ontology/login#",
   "descriptors": {
     "User": {
       "class": "User",
@@ -31,21 +31,33 @@
           "range": "string",
           "required": true,
           "sql_column": "emailaddress",
-          "sql_type": "NVARCHAR"
+          "sql_type": "NVARCHAR",
+          "mongo_field": "emailAddress"
         },
         {
           "name": "firstName",
           "range": "string",
           "required": false,
-          "sql_column": "firstName",
-          "sql_type": "NVARCHAR"
+          "sql_column": "firstname",
+          "sql_type": "NVARCHAR",
+          "mongo_field": "firstName"
         },
         {
           "name": "lastName",
           "range": "string",
           "required": false,
-          "sql_column": "lastName",
-          "sql_type": "NVARCHAR"
+          "sql_column": "lastname",
+          "sql_type": "NVARCHAR",
+          "mongo_field": "lastName"
+        },
+        {
+          "name": "userType",
+          "range": "UserTypeEnum",
+          "required": false,
+          "sql_column": "usertype",
+          "sql_type": "INT",
+          "mongo_field": "userType",
+          "mongo_type": "INT"
         },
         {
           "name": "authenticationType",
@@ -79,17 +91,34 @@
           "login_block_condition": "value = 0"
         },
         {
+          "name": "isDeleted",
+          "range": "SqlBit",
+          "required": false,
+          "sql_column": "isdeleted",
+          "sql_type": "BIT",
+          "normalize_to_bool": true,
+          "login_block_condition": "value = 1"
+        },
+        {
+          "name": "isSystemUser",
+          "range": "SqlBit",
+          "required": false,
+          "sql_column": "issystemuser",
+          "sql_type": "BIT",
+          "normalize_to_bool": true
+        },
+        {
           "name": "isdCode",
           "range": "string",
           "required": false,
-          "sql_column": "isdCode",
+          "sql_column": "isdcode",
           "co_required_with": "mobileNumber"
         },
         {
           "name": "mobileNumber",
           "range": "string",
           "required": false,
-          "sql_column": "mobileNumber",
+          "sql_column": "mobileno",
           "co_required_with": "isdCode"
         },
         {
@@ -115,6 +144,10 @@
         {
           "property": "isActive",
           "condition": "value = 0"
+        },
+        {
+          "property": "isDeleted",
+          "condition": "value = 1"
         }
       ]
     },
@@ -122,16 +155,9 @@
       "class": "PartnerMapping",
       "datasource": "sqlserver",
       "version": "1.0.0",
-      "table": "Um_Userpartnermapping",
+      "table": "UM_UserPartnermapping",
       "foreign_key": "userId → User.userId",
       "properties": [
-        {
-          "name": "mappingId",
-          "range": "string",
-          "required": true,
-          "derived_from": "userId + bpc + partnerCode",
-          "derivation_rule": "f'{userId}_{bpc}_{partnerCode}'"
-        },
         {
           "name": "userId",
           "range": "integer",
@@ -148,15 +174,17 @@
         },
         {
           "name": "bpc",
-          "range": "string",
+          "range": "integer",
           "required": true,
-          "sql_column": "bpc"
+          "sql_column": "bpc",
+          "sql_type": "BIGINT"
         },
         {
           "name": "partnerCode",
-          "range": "string",
+          "range": "integer",
           "required": true,
-          "sql_column": "partnercode"
+          "sql_column": "partnercode",
+          "sql_type": "INT"
         },
         {
           "name": "mappingIsActive",
@@ -168,12 +196,11 @@
           "login_block_condition": "no row with value = 1 for this userId"
         },
         {
-          "name": "isDefault",
-          "range": "SqlBit",
+          "name": "contactCode",
+          "range": "integer",
           "required": false,
-          "sql_column": "isdefault",
-          "sql_type": "BIT",
-          "normalize_to_bool": true
+          "sql_column": "contactcode",
+          "sql_type": "BIGINT"
         }
       ],
       "login_block_conditions": [
@@ -187,7 +214,7 @@
       "class": "MobileVerificationStatus",
       "datasource": "sqlserver",
       "version": "1.0.0",
-      "table": "um_usermobileverificationstatus",
+      "table": "UM_UserMobileNumberVerified",
       "foreign_key": "username → User.username",
       "properties": [
         {
@@ -199,7 +226,7 @@
           "cross_source_link": "UserDocument.userName"
         },
         {
-          "name": "isMobileNumberVerifiedSQL",
+          "name": "isMobileNumberVerified",
           "range": "SqlBit",
           "required": true,
           "sql_column": "ismobilenumberverified",
@@ -207,6 +234,66 @@
           "normalize_to_bool": true,
           "cross_source_check": "UserDocument.isMobileNumberVerifiedMongo",
           "normalization": "BIT 0→false, 1→true"
+        }
+      ]
+    },
+    "IsdCode": {
+      "class": "IsdCode",
+      "datasource": "mongodb",
+      "version": "1.0.0",
+      "collection": null,
+      "properties": [
+        {
+          "name": "isdCountryCode",
+          "range": "string",
+          "required": false,
+          "mongo_field": "countryCode"
+        },
+        {
+          "name": "isdExtension",
+          "range": "string",
+          "required": false,
+          "mongo_field": "extension"
+        }
+      ]
+    },
+    "MongoPartnerMapping": {
+      "class": "MongoPartnerMapping",
+      "datasource": "mongodb",
+      "version": "1.0.0",
+      "collection": null,
+      "properties": [
+        {
+          "name": "mongoMappingUserId",
+          "range": "string",
+          "required": false,
+          "mongo_field": "userId"
+        },
+        {
+          "name": "mongoBpc",
+          "range": "integer",
+          "required": false,
+          "mongo_field": "bpc",
+          "mongo_type": "INT"
+        },
+        {
+          "name": "mongoPartnerCode",
+          "range": "integer",
+          "required": false,
+          "mongo_field": "partnerCode",
+          "mongo_type": "INT"
+        },
+        {
+          "name": "mongoMappingIsActive",
+          "range": "boolean",
+          "required": false,
+          "mongo_field": "isActive"
+        },
+        {
+          "name": "mongoContactCode",
+          "range": "string",
+          "required": false,
+          "mongo_field": "contactCode"
         }
       ]
     },
@@ -225,37 +312,44 @@
           "cross_source_link": "User.username"
         },
         {
-          "name": "normalizedUserName",
+          "name": "emailAddress",
           "range": "string",
-          "required": false,
-          "mongo_field": "normalizedUserName",
-          "derived_from": "userName",
-          "derivation_rule": "lowercase(userName)"
+          "required": true,
+          "sql_column": "emailaddress",
+          "sql_type": "NVARCHAR",
+          "mongo_field": "emailAddress"
         },
         {
-          "name": "mongoFirstName",
+          "name": "firstName",
           "range": "string",
           "required": false,
+          "sql_column": "firstname",
+          "sql_type": "NVARCHAR",
           "mongo_field": "firstName"
         },
         {
-          "name": "mongoLastName",
+          "name": "lastName",
           "range": "string",
           "required": false,
+          "sql_column": "lastname",
+          "sql_type": "NVARCHAR",
           "mongo_field": "lastName"
         },
         {
-          "name": "isMobileNumberVerifiedMongo",
-          "range": "boolean",
+          "name": "userType",
+          "range": "UserTypeEnum",
           "required": false,
-          "mongo_field": "ismobileNumberVerified",
-          "cross_source_check": "MobileVerificationStatus.isMobileNumberVerifiedSQL",
-          "normalization": "Compare MongoDB true/false with SQL BIT 1/0 after normalization"
+          "sql_column": "usertype",
+          "sql_type": "INT",
+          "mongo_field": "userType",
+          "mongo_type": "INT"
         },
         {
-          "name": "mongoAuthenticationType",
+          "name": "authenticationType",
           "range": "AuthenticationTypeEnum",
-          "required": false,
+          "required": true,
+          "sql_column": "authenticationtype",
+          "sql_type": "INT",
           "mongo_field": "authenticationType",
           "mongo_type": "INT",
           "enum_integer_map": {
@@ -264,8 +358,66 @@
           }
         },
         {
-          "name": "mongoIsdCode",
+          "name": "normalizedUserName",
           "range": "string",
+          "required": false,
+          "mongo_field": "normalizedUserName",
+          "derived_from": "userName",
+          "derivation_rule": "lowercase(userName)"
+        },
+        {
+          "name": "normalizedEmailAddress",
+          "range": "string",
+          "required": false,
+          "mongo_field": "normalizedEmailAddress",
+          "derived_from": "emailAddress",
+          "derivation_rule": "lowercase(emailAddress)"
+        },
+        {
+          "name": "normalizedFirstName",
+          "range": "string",
+          "required": false,
+          "mongo_field": "normalizedFirstName",
+          "derived_from": "firstName",
+          "derivation_rule": "lowercase(firstName)"
+        },
+        {
+          "name": "normalizedLastName",
+          "range": "string",
+          "required": false,
+          "mongo_field": "normalizedLastName",
+          "derived_from": "lastName",
+          "derivation_rule": "lowercase(lastName)"
+        },
+        {
+          "name": "normalizedFullName",
+          "range": "string",
+          "required": false,
+          "mongo_field": "normalizedFullName",
+          "derived_from": "firstName + lastName",
+          "derivation_rule": "lowercase(firstName + ' ' + lastName)"
+        },
+        {
+          "name": "mongoIsActive",
+          "range": "boolean",
+          "required": false,
+          "mongo_field": "isActive"
+        },
+        {
+          "name": "mongoIsLocked",
+          "range": "boolean",
+          "required": false,
+          "mongo_field": "isLocked"
+        },
+        {
+          "name": "mongoIsSystemUser",
+          "range": "boolean",
+          "required": false,
+          "mongo_field": "isSystemUser"
+        },
+        {
+          "name": "mongoIsdCode",
+          "range": "IsdCode",
           "required": false,
           "mongo_field": "isdCode",
           "co_required_with": "mobileNo"
@@ -278,10 +430,18 @@
           "co_required_with": "mongoIsdCode"
         },
         {
-          "name": "userPartnerMapping",
-          "range": "PartnerMapping",
+          "name": "isMobileNumberVerifiedMongo",
+          "range": "boolean",
           "required": false,
-          "mongo_field": "userpartnermapping"
+          "mongo_field": "isMobileNumberVerified",
+          "cross_source_check": "MobileVerificationStatus.isMobileNumberVerified",
+          "normalization": "Compare MongoDB true/false with SQL BIT 1/0 after normalization"
+        },
+        {
+          "name": "userPartnerMappings",
+          "range": "MongoPartnerMapping",
+          "required": false,
+          "mongo_field": "userPartnerMappings"
         }
       ]
     }

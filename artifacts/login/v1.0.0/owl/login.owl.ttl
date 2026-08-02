@@ -1,5 +1,5 @@
 @prefix dcterms: <http://purl.org/dc/terms/> .
-@prefix gep: <https://gep.com/ontology/login#> .
+@prefix gep: <http://gep.com/ontology/login#> .
 @prefix linkml: <https://w3id.org/linkml/> .
 @prefix owl: <http://www.w3.org/2002/07/owl#> .
 @prefix pav: <http://purl.org/pav/> .
@@ -8,209 +8,142 @@
 @prefix skos: <http://www.w3.org/2004/02/skos/core#> .
 @prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
 
-gep:AbstractUser a owl:Class ;
-    rdfs:label "AbstractUser" ;
-    rdfs:subClassOf [ owl:unionOf ( gep:User gep:UserDocument ) ] ;
-    skos:definition "A person who has an account in the system",
-        "Abstract base concept — a user account in the system" ;
+gep:userPartnerMappings a owl:ObjectProperty ;
+    rdfs:label "userPartnerMappings" ;
+    gep:mirrors_sql_table "UM_UserPartnermapping" ;
+    gep:mongo_field "userPartnerMappings" ;
+    rdfs:range gep:MongoPartnerMapping ;
+    skos:definition "Embedded array of partner mapping sub-documents in MongoDB users document" ;
     skos:inScheme gep: ;
-    skos:prefLabel "User" .
+    skos:prefLabel "User Partner Mappings (MongoDB)" .
 
-<https://gep.com/ontology/login#AuthenticationTypeEnum#Password> a owl:Class ;
-    rdfs:label "Password" ;
-    rdfs:subClassOf gep:AuthenticationTypeEnum ;
-    skos:definition "Standard username and password authentication" ;
-    skos:prefLabel "Password" ;
-    gep:integer_value "1" .
-
-<https://gep.com/ontology/login#AuthenticationTypeEnum#SSO> a owl:Class ;
-    rdfs:label "SSO" ;
-    rdfs:subClassOf gep:AuthenticationTypeEnum ;
-    skos:definition "Single Sign-On via SAML/OAuth/OIDC" ;
-    skos:prefLabel "Single Sign-On" ;
-    gep:integer_value "2" .
+gep:IsdCode a owl:Class ;
+    rdfs:label "IsdCode" ;
+    gep:datasource "mongodb" ;
+    gep:embedded true ;
+    rdfs:subClassOf [ a owl:Restriction ;
+            owl:maxCardinality 1 ;
+            owl:onProperty gep:isdExtension ],
+        [ a owl:Restriction ;
+            owl:maxCardinality 1 ;
+            owl:onProperty gep:isdCountryCode ] ;
+    skos:definition "Embedded ISD code object in MongoDB users.isdCode" ;
+    skos:inScheme gep: ;
+    skos:note "Embedded sub-document — not a separate collection" ;
+    skos:prefLabel "ISD Code Object (MongoDB)" .
 
 gep:MobileVerificationStatus a owl:Class ;
     rdfs:label "MobileVerificationStatus" ;
+    gep:datasource "sqlserver" ;
+    gep:foreign_key "username → User.username" ;
+    gep:table "UM_UserMobileNumberVerified" ;
     rdfs:subClassOf [ a owl:Restriction ;
+            owl:cardinality 1 ;
+            owl:onProperty gep:username ],
+        [ a owl:Restriction ;
+            owl:cardinality 1 ;
+            owl:onProperty gep:isMobileNumberVerified ],
+        [ a owl:Restriction ;
             owl:allValuesFrom [ a rdfs:Datatype ;
                     owl:intersectionOf ( xsd:integer [ a rdfs:Datatype ;
                                 owl:onDatatype xsd:integer ;
                                 owl:withRestrictions ( [ xsd:minInclusive 0 ] ) ] [ a rdfs:Datatype ;
                                 owl:onDatatype xsd:integer ;
                                 owl:withRestrictions ( [ xsd:maxInclusive 1 ] ) ] ) ] ;
-            owl:onProperty gep:isMobileNumberVerifiedSQL ],
-        [ a owl:Restriction ;
-            owl:minCardinality 1 ;
-            owl:onProperty gep:username ],
-        [ a owl:Restriction ;
-            owl:maxCardinality 1 ;
-            owl:onProperty gep:username ],
-        [ a owl:Restriction ;
-            owl:minCardinality 1 ;
-            owl:onProperty gep:isMobileNumberVerifiedSQL ],
-        [ a owl:Restriction ;
-            owl:maxCardinality 1 ;
-            owl:onProperty gep:isMobileNumberVerifiedSQL ],
-        [ a owl:Restriction ;
-            owl:allValuesFrom xsd:string ;
-            owl:onProperty gep:username ] ;
-    skos:definition "SQL-side mobile verification record — um_usermobileverificationstatus" ;
+            owl:onProperty gep:isMobileNumberVerified ] ;
+    skos:definition "SQL-side mobile verification record — UM_UserMobileNumberVerified" ;
     skos:inScheme gep: ;
     skos:note "Cross-checked against MongoDB UserDocument.isMobileNumberVerifiedMongo. A mismatch between the two is reported as a data sync issue." ;
-    skos:prefLabel "Mobile Verification Status (SQL)" ;
-    gep:datasource "sqlserver" ;
-    gep:foreign_key "username → User.username" ;
-    gep:table "um_usermobileverificationstatus" .
+    skos:prefLabel "Mobile Verification Status (SQL)" .
 
-gep:userPartnerMapping a owl:ObjectProperty ;
-    rdfs:label "userPartnerMapping" ;
-    rdfs:range gep:PartnerMapping ;
-    skos:definition "Embedded array of partner mappings in MongoDB user document. Mirrors the structure of SQL Um_Userpartnermapping." ;
-    skos:inScheme gep: ;
-    skos:prefLabel "User Partner Mapping (MongoDB)" ;
-    gep:mirrors_sql_table "Um_Userpartnermapping" ;
-    gep:mongo_field "userpartnermapping" .
-
-gep:UserDocument a owl:Class ;
-    rdfs:label "UserDocument" ;
-    rdfs:subClassOf [ a owl:Restriction ;
-            owl:minCardinality 0 ;
-            owl:onProperty gep:isMobileNumberVerifiedMongo ],
-        [ a owl:Restriction ;
-            owl:maxCardinality 1 ;
-            owl:onProperty gep:mongoIsdCode ],
-        [ a owl:Restriction ;
-            owl:allValuesFrom xsd:string ;
-            owl:onProperty gep:normalizedUserName ],
-        [ a owl:Restriction ;
-            owl:minCardinality 0 ;
-            owl:onProperty gep:mongoLastName ],
-        [ a owl:Restriction ;
-            owl:minCardinality 0 ;
-            owl:onProperty gep:mongoAuthenticationType ],
-        [ a owl:Restriction ;
-            owl:allValuesFrom xsd:string ;
-            owl:onProperty gep:mobileNo ],
-        [ a owl:Restriction ;
-            owl:maxCardinality 1 ;
-            owl:onProperty gep:mongoAuthenticationType ],
-        [ a owl:Restriction ;
-            owl:minCardinality 0 ;
-            owl:onProperty gep:mobileNo ],
-        [ a owl:Restriction ;
-            owl:allValuesFrom gep:PartnerMapping ;
-            owl:onProperty gep:userPartnerMapping ],
-        [ a owl:Restriction ;
-            owl:minCardinality 0 ;
-            owl:onProperty gep:mongoIsdCode ],
-        [ a owl:Restriction ;
-            owl:minCardinality 0 ;
-            owl:onProperty gep:normalizedUserName ],
-        [ a owl:Restriction ;
-            owl:allValuesFrom xsd:string ;
-            owl:onProperty gep:userName ],
-        [ a owl:Restriction ;
-            owl:maxCardinality 1 ;
-            owl:onProperty gep:mobileNo ],
-        [ a owl:Restriction ;
-            owl:minCardinality 0 ;
-            owl:onProperty gep:userPartnerMapping ],
-        [ a owl:Restriction ;
-            owl:maxCardinality 1 ;
-            owl:onProperty gep:isMobileNumberVerifiedMongo ],
-        [ a owl:Restriction ;
-            owl:maxCardinality 1 ;
-            owl:onProperty gep:userName ],
-        [ a owl:Restriction ;
-            owl:allValuesFrom xsd:boolean ;
-            owl:onProperty gep:isMobileNumberVerifiedMongo ],
-        [ a owl:Restriction ;
-            owl:maxCardinality 1 ;
-            owl:onProperty gep:mongoFirstName ],
-        [ a owl:Restriction ;
-            owl:allValuesFrom gep:AuthenticationTypeEnum ;
-            owl:onProperty gep:mongoAuthenticationType ],
-        [ a owl:Restriction ;
-            owl:minCardinality 0 ;
-            owl:onProperty gep:mongoFirstName ],
-        [ a owl:Restriction ;
-            owl:allValuesFrom xsd:string ;
-            owl:onProperty gep:mongoLastName ],
-        [ a owl:Restriction ;
-            owl:minCardinality 1 ;
-            owl:onProperty gep:userName ],
-        [ a owl:Restriction ;
-            owl:maxCardinality 1 ;
-            owl:onProperty gep:normalizedUserName ],
-        [ a owl:Restriction ;
-            owl:allValuesFrom xsd:string ;
-            owl:onProperty gep:mongoFirstName ],
-        [ a owl:Restriction ;
-            owl:maxCardinality 1 ;
-            owl:onProperty gep:mongoLastName ],
-        [ a owl:Restriction ;
-            owl:allValuesFrom xsd:string ;
-            owl:onProperty gep:mongoIsdCode ],
-        gep:AbstractUser ;
-    skos:definition "User document from MongoDB users collection" ;
-    skos:inScheme gep: ;
-    skos:note "Embeds userPartnerMapping array mirroring SQL Um_Userpartnermapping. isMobileNumberVerifiedMongo cross-checked with SQL isMobileNumberVerifiedSQL." ;
-    skos:prefLabel "MongoDB User Document" ;
-    gep:collection "users" ;
+gep:MongoPartnerMapping a owl:Class ;
+    rdfs:label "MongoPartnerMapping" ;
     gep:datasource "mongodb" ;
-    gep:link_key "userName" .
-
-gep:authenticationType a owl:ObjectProperty ;
-    rdfs:label "authenticationType" ;
-    rdfs:range gep:AuthenticationTypeEnum ;
-    skos:definition "Authentication mechanism. Integer in both SQL and MongoDB. Validate: allowed values are 1 (Password) or 2 (SSO)." ;
+    gep:embedded true ;
+    rdfs:subClassOf [ a owl:Restriction ;
+            owl:maxCardinality 1 ;
+            owl:onProperty gep:mongoPartnerCode ],
+        [ a owl:Restriction ;
+            owl:maxCardinality 1 ;
+            owl:onProperty gep:mongoMappingIsActive ],
+        [ a owl:Restriction ;
+            owl:maxCardinality 1 ;
+            owl:onProperty gep:mongoContactCode ],
+        [ a owl:Restriction ;
+            owl:maxCardinality 1 ;
+            owl:onProperty gep:mongoBpc ],
+        [ a owl:Restriction ;
+            owl:maxCardinality 1 ;
+            owl:onProperty gep:mongoMappingUserId ] ;
+    skos:definition "Embedded partner mapping sub-document in MongoDB users.userPartnerMappings array" ;
     skos:inScheme gep: ;
-    skos:prefLabel "Authentication Type" ;
-    gep:mongo_field "authenticationType" ;
-    gep:mongo_type "INT" ;
-    gep:sql_column "authenticationtype" ;
-    gep:sql_type "INT" .
+    skos:note "Embedded array element — mirrors SQL UM_UserPartnermapping logically" ;
+    skos:prefLabel "Mongo Partner Mapping" .
+
+gep:PartnerMapping a owl:Class ;
+    rdfs:label "PartnerMapping" ;
+    gep:datasource "sqlserver" ;
+    gep:foreign_key "userId → User.userId" ;
+    gep:table "UM_UserPartnermapping" ;
+    rdfs:subClassOf [ a owl:Restriction ;
+            owl:cardinality 1 ;
+            owl:onProperty gep:userId ],
+        [ a owl:Restriction ;
+            owl:maxCardinality 1 ;
+            owl:onProperty gep:contactCode ],
+        [ a owl:Restriction ;
+            owl:maxCardinality 1 ;
+            owl:onProperty gep:hasUser ],
+        [ a owl:Restriction ;
+            owl:cardinality 1 ;
+            owl:onProperty gep:partnerCode ],
+        [ a owl:Restriction ;
+            owl:allValuesFrom [ a rdfs:Datatype ;
+                    owl:intersectionOf ( xsd:integer [ a rdfs:Datatype ;
+                                owl:onDatatype xsd:integer ;
+                                owl:withRestrictions ( [ xsd:minInclusive 0 ] ) ] [ a rdfs:Datatype ;
+                                owl:onDatatype xsd:integer ;
+                                owl:withRestrictions ( [ xsd:maxInclusive 1 ] ) ] ) ] ;
+            owl:onProperty gep:mappingIsActive ],
+        [ a owl:Restriction ;
+            owl:maxCardinality 1 ;
+            owl:onProperty gep:mappingIsActive ],
+        [ a owl:Restriction ;
+            owl:cardinality 1 ;
+            owl:onProperty gep:bpc ] ;
+    skos:definition "Maps a user to BPC/partner codes — SQL Server UM_UserPartnermapping" ;
+    skos:inScheme gep: ;
+    skos:note "BPC is the parent grouping; partnerCode is the child code under BPC. At least one row with mappingIsActive=1 is required for login." ;
+    skos:prefLabel "Partner Mapping" .
 
 gep:bpc a owl:DatatypeProperty ;
     rdfs:label "bpc" ;
-    rdfs:range xsd:string ;
-    skos:definition "Business Partner Code — parent grouping above partnerCode",
+    gep:hierarchy_role "parent" ;
+    gep:sql_column "bpc" ;
+    gep:sql_type "BIGINT" ;
+    rdfs:range xsd:integer ;
+    skos:definition "Business Partner Code — parent grouping above partnerCode (BIGINT in SQL)",
         "Higher-level partner grouping. partnerCode is a child of this value." ;
     skos:inScheme gep: ;
-    skos:prefLabel "BPC" ;
-    gep:hierarchy_role "parent" ;
-    gep:sql_column "bpc" .
+    skos:prefLabel "BPC" .
 
-gep:emailAddress a owl:DatatypeProperty ;
-    rdfs:label "emailAddress" ;
-    rdfs:range [ a rdfs:Datatype ;
-            owl:intersectionOf ( xsd:string [ a rdfs:Datatype ;
-                        owl:onDatatype xsd:string ;
-                        owl:withRestrictions ( [ xsd:pattern "^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$" ] ) ] ) ] ;
-    skos:definition "User email address" ;
+gep:contactCode a owl:DatatypeProperty ;
+    rdfs:label "contactCode" ;
+    gep:sql_column "contactcode" ;
+    gep:sql_type "BIGINT" ;
+    rdfs:range xsd:integer ;
+    skos:definition "Contact code for this partner mapping (BIGINT in SQL)" ;
     skos:inScheme gep: ;
-    skos:prefLabel "Email Address" ;
-    gep:sql_column "emailaddress" ;
-    gep:sql_type "NVARCHAR" .
-
-gep:firstName a owl:DatatypeProperty ;
-    rdfs:label "firstName" ;
-    rdfs:range xsd:string ;
-    skos:definition "User first name (SQL)" ;
-    skos:inScheme gep: ;
-    skos:prefLabel "First Name" ;
-    gep:sql_column "firstName" ;
-    gep:sql_type "NVARCHAR" .
+    skos:prefLabel "Contact Code" .
 
 gep:hasMobileVerificationStatus a owl:ObjectProperty ;
     rdfs:label "hasMobileVerificationStatus" ;
+    gep:resolution_via "username" ;
     rdfs:range gep:MobileVerificationStatus ;
     skos:definition "Links a User to their mobile number verification record",
         "OWL ObjectProperty — semantic link from User to their MobileVerificationStatus. In SQL, resolved via the username FK. Used for OWL reasoning and KG traversal." ;
     skos:inScheme gep: ;
-    skos:prefLabel "Has Mobile Verification Status" ;
-    gep:resolution_via "username" .
+    skos:prefLabel "Has Mobile Verification Status" .
 
 gep:hasPartnerMappings a owl:ObjectProperty ;
     rdfs:label "hasPartnerMappings" ;
@@ -221,8 +154,242 @@ gep:hasPartnerMappings a owl:ObjectProperty ;
     skos:inScheme gep: ;
     skos:prefLabel "Has Partner Mappings" .
 
+gep:isMobileNumberVerifiedMongo a owl:DatatypeProperty ;
+    rdfs:label "isMobileNumberVerifiedMongo" ;
+    gep:cross_source_check "MobileVerificationStatus.isMobileNumberVerified" ;
+    gep:mongo_field "isMobileNumberVerified" ;
+    gep:normalization_note "Compare MongoDB true/false with SQL BIT 1/0 after normalization" ;
+    rdfs:range xsd:boolean ;
+    skos:definition "MongoDB native boolean for mobile number verification. Cross-checked against SQL isMobileNumberVerified after BIT normalization." ;
+    skos:inScheme gep: ;
+    skos:prefLabel "Is Mobile Verified (MongoDB)" .
+
+gep:isdCountryCode a owl:DatatypeProperty ;
+    rdfs:label "isdCountryCode" ;
+    gep:mongo_field "countryCode" ;
+    rdfs:range xsd:string ;
+    skos:definition "Country code inside the isdCode embedded object (e.g. IN, US, GB)" ;
+    skos:inScheme gep: ;
+    skos:prefLabel "Country Code" .
+
+gep:isdExtension a owl:DatatypeProperty ;
+    rdfs:label "isdExtension" ;
+    gep:mongo_field "extension" ;
+    rdfs:range xsd:string ;
+    skos:definition "Dialing extension inside the isdCode embedded object (e.g. +91, +1)" ;
+    skos:inScheme gep: ;
+    skos:prefLabel "ISD Extension" .
+
+gep:mongoBpc a owl:DatatypeProperty ;
+    rdfs:label "mongoBpc" ;
+    gep:mongo_field "bpc" ;
+    gep:mongo_type "INT" ;
+    rdfs:range xsd:integer ;
+    skos:definition "BPC inside MongoDB userPartnerMappings sub-document (INT)" ;
+    skos:inScheme gep: ;
+    skos:prefLabel "BPC (MongoDB)" .
+
+gep:mongoContactCode a owl:DatatypeProperty ;
+    rdfs:label "mongoContactCode" ;
+    gep:mongo_field "contactCode" ;
+    rdfs:range xsd:string ;
+    skos:definition "contactCode inside MongoDB userPartnerMappings sub-document" ;
+    skos:inScheme gep: ;
+    skos:prefLabel "Contact Code (MongoDB)" .
+
+gep:mongoIsActive a owl:DatatypeProperty ;
+    rdfs:label "mongoIsActive" ;
+    gep:mongo_field "isActive" ;
+    rdfs:range xsd:boolean ;
+    skos:definition "MongoDB native boolean — false means account inactive. Maps to SQL isActive (BIT)" ;
+    skos:inScheme gep: ;
+    skos:prefLabel "Is Active (MongoDB)" .
+
+gep:mongoIsLocked a owl:DatatypeProperty ;
+    rdfs:label "mongoIsLocked" ;
+    gep:mongo_field "isLocked" ;
+    rdfs:range xsd:boolean ;
+    skos:definition "MongoDB native boolean — true means account is locked. Maps to SQL isLocked (BIT)" ;
+    skos:inScheme gep: ;
+    skos:prefLabel "Is Locked (MongoDB)" .
+
+gep:mongoIsSystemUser a owl:DatatypeProperty ;
+    rdfs:label "mongoIsSystemUser" ;
+    gep:mongo_field "isSystemUser" ;
+    rdfs:range xsd:boolean ;
+    skos:definition "MongoDB native boolean — true means internal system account. Maps to SQL isSystemUser (BIT)" ;
+    skos:inScheme gep: ;
+    skos:prefLabel "Is System User (MongoDB)" .
+
+gep:mongoMappingIsActive a owl:DatatypeProperty ;
+    rdfs:label "mongoMappingIsActive" ;
+    gep:mongo_field "isActive" ;
+    rdfs:range xsd:boolean ;
+    skos:definition "isActive inside MongoDB userPartnerMappings sub-document" ;
+    skos:inScheme gep: ;
+    skos:prefLabel "Is Active (Mongo Mapping)" .
+
+gep:mongoMappingUserId a owl:DatatypeProperty ;
+    rdfs:label "mongoMappingUserId" ;
+    gep:mongo_field "userId" ;
+    rdfs:range xsd:string ;
+    skos:definition "userId stored as string inside MongoDB userPartnerMappings sub-document" ;
+    skos:inScheme gep: ;
+    skos:prefLabel "Mapping User ID (MongoDB)" .
+
+gep:mongoPartnerCode a owl:DatatypeProperty ;
+    rdfs:label "mongoPartnerCode" ;
+    gep:mongo_field "partnerCode" ;
+    gep:mongo_type "INT" ;
+    rdfs:range xsd:integer ;
+    skos:definition "Partner code inside MongoDB userPartnerMappings sub-document (INT)" ;
+    skos:inScheme gep: ;
+    skos:prefLabel "Partner Code (MongoDB)" .
+
+gep:normalizedEmailAddress a owl:DatatypeProperty ;
+    rdfs:label "normalizedEmailAddress" ;
+    gep:derivation_rule "lowercase(emailAddress)" ;
+    gep:derived_from "emailAddress" ;
+    gep:mongo_field "normalizedEmailAddress" ;
+    rdfs:range xsd:string ;
+    skos:definition "Lowercase emailAddress. Used for case-insensitive email lookups" ;
+    skos:inScheme gep: ;
+    skos:prefLabel "Normalized Email Address" .
+
+gep:normalizedFirstName a owl:DatatypeProperty ;
+    rdfs:label "normalizedFirstName" ;
+    gep:derivation_rule "lowercase(firstName)" ;
+    gep:derived_from "firstName" ;
+    gep:mongo_field "normalizedFirstName" ;
+    rdfs:range xsd:string ;
+    skos:definition "Lowercase firstName. Used for case-insensitive name lookups" ;
+    skos:inScheme gep: ;
+    skos:prefLabel "Normalized First Name" .
+
+gep:normalizedFullName a owl:DatatypeProperty ;
+    rdfs:label "normalizedFullName" ;
+    gep:derivation_rule "lowercase(firstName + ' ' + lastName)" ;
+    gep:derived_from "firstName + lastName" ;
+    gep:mongo_field "normalizedFullName" ;
+    rdfs:range xsd:string ;
+    skos:definition "Lowercase concatenation of first and last name" ;
+    skos:inScheme gep: ;
+    skos:prefLabel "Normalized Full Name" .
+
+gep:normalizedLastName a owl:DatatypeProperty ;
+    rdfs:label "normalizedLastName" ;
+    gep:derivation_rule "lowercase(lastName)" ;
+    gep:derived_from "lastName" ;
+    gep:mongo_field "normalizedLastName" ;
+    rdfs:range xsd:string ;
+    skos:definition "Lowercase lastName. Used for case-insensitive name lookups" ;
+    skos:inScheme gep: ;
+    skos:prefLabel "Normalized Last Name" .
+
+gep:normalizedUserName a owl:DatatypeProperty ;
+    rdfs:label "normalizedUserName" ;
+    gep:derivation_rule "lowercase(userName)" ;
+    gep:derived_from "userName" ;
+    gep:mongo_field "normalizedUserName" ;
+    rdfs:range xsd:string ;
+    skos:definition "Lowercase userName. Used for case-insensitive user lookups" ;
+    skos:inScheme gep: ;
+    skos:note "Always computed: lowercase(userName)" ;
+    skos:prefLabel "Normalized Username" .
+
+gep:partnerCode a owl:DatatypeProperty ;
+    rdfs:label "partnerCode" ;
+    gep:hierarchy_role "child" ;
+    gep:parent_slot "bpc" ;
+    gep:sql_column "partnercode" ;
+    gep:sql_type "INT" ;
+    rdfs:range xsd:integer ;
+    skos:definition "Partner code — child code nested under a BPC group (INT in SQL)",
+        "Specific partner identifier under a BPC group" ;
+    skos:inScheme gep: ;
+    skos:prefLabel "Partner Code" .
+
+gep:userName a owl:DatatypeProperty ;
+    rdfs:label "userName" ;
+    gep:cross_source_link "User.username" ;
+    gep:mongo_field "userName" ;
+    rdfs:range xsd:string ;
+    skos:definition "MongoDB userName field. Cross-source link key — equals SQL UM_Users.username" ;
+    skos:inScheme gep: ;
+    skos:prefLabel "Username (MongoDB)" .
+
+gep:AbstractUser a owl:Class ;
+    rdfs:label "AbstractUser" ;
+    rdfs:subClassOf [ owl:unionOf ( gep:User gep:UserDocument ) ] ;
+    skos:definition "A person who has an account in the system",
+        "Abstract base concept — a user account in the system" ;
+    skos:inScheme gep: ;
+    skos:prefLabel "User" .
+
+<http://gep.com/ontology/login#AuthenticationTypeEnum#NonSSO> a owl:Class ;
+    rdfs:label "NonSSO" ;
+    gep:integer_value "1" ;
+    rdfs:subClassOf gep:AuthenticationTypeEnum ;
+    skos:definition "Non-SSO authentication (username and password)" ;
+    skos:prefLabel "Non-SSO" .
+
+<http://gep.com/ontology/login#AuthenticationTypeEnum#SSO> a owl:Class ;
+    rdfs:label "SSO" ;
+    gep:integer_value "2" ;
+    rdfs:subClassOf gep:AuthenticationTypeEnum ;
+    skos:definition "Single Sign-On via SAML/OAuth/OIDC" ;
+    skos:prefLabel "Single Sign-On" .
+
+<http://gep.com/ontology/login#UserTypeEnum#Buyer> a owl:Class ;
+    rdfs:label "Buyer" ;
+    gep:integer_value "0" ;
+    rdfs:subClassOf gep:UserTypeEnum ;
+    skos:definition "Buyer-side user" ;
+    skos:prefLabel "Buyer" .
+
+<http://gep.com/ontology/login#UserTypeEnum#Supplier> a owl:Class ;
+    rdfs:label "Supplier" ;
+    gep:integer_value "1" ;
+    rdfs:subClassOf gep:UserTypeEnum ;
+    skos:definition "Supplier-side user" ;
+    skos:prefLabel "Supplier" .
+
+gep:authenticationType a owl:ObjectProperty ;
+    rdfs:label "authenticationType" ;
+    gep:mongo_field "authenticationType" ;
+    gep:mongo_type "INT" ;
+    gep:sql_column "authenticationtype" ;
+    gep:sql_type "INT" ;
+    rdfs:range gep:AuthenticationTypeEnum ;
+    skos:definition "Authentication mechanism. Integer in both SQL and MongoDB. 1 = Non-SSO, 2 = SSO." ;
+    skos:inScheme gep: ;
+    skos:prefLabel "Authentication Type" .
+
+gep:firstName a owl:DatatypeProperty ;
+    rdfs:label "firstName" ;
+    gep:mongo_field "firstName" ;
+    gep:sql_column "firstname" ;
+    gep:sql_type "NVARCHAR" ;
+    rdfs:range xsd:string ;
+    skos:definition "User first name — stored in both SQL and MongoDB" ;
+    skos:inScheme gep: ;
+    skos:prefLabel "First Name" .
+
+gep:hasUser a owl:ObjectProperty ;
+    rdfs:label "hasUser" ;
+    gep:resolution_via "userId" ;
+    rdfs:range gep:User ;
+    owl:inverseOf gep:hasPartnerMappings ;
+    skos:definition "Links a PartnerMapping record to the User it belongs to",
+        "OWL ObjectProperty — semantic link from PartnerMapping to its owning User. In SQL, resolved via the integer userId FK. Not stored as a URI in the database; used by OWL reasoners and the KG to traverse the relationship." ;
+    skos:inScheme gep: ;
+    skos:prefLabel "Has User" .
+
 gep:isActive a owl:DatatypeProperty ;
     rdfs:label "isActive" ;
+    gep:login_block_condition "value = 0" ;
+    gep:sql_column "isactive" ;
+    gep:sql_type "BIT" ;
     rdfs:range [ a rdfs:Datatype ;
             owl:intersectionOf ( xsd:integer [ a rdfs:Datatype ;
                         owl:onDatatype xsd:integer ;
@@ -231,29 +398,28 @@ gep:isActive a owl:DatatypeProperty ;
                         owl:withRestrictions ( [ xsd:maxInclusive 1 ] ) ] ) ] ;
     skos:definition "SQL BIT — 0 means account is deactivated. Login is blocked when value = 0" ;
     skos:inScheme gep: ;
-    skos:prefLabel "Is Active" ;
-    gep:login_block_condition "value = 0" ;
-    gep:sql_column "isactive" ;
-    gep:sql_type "BIT" .
+    skos:prefLabel "Is Active" .
 
-gep:isDefault a owl:DatatypeProperty ;
-    rdfs:label "isDefault" ;
+gep:isDeleted a owl:DatatypeProperty ;
+    rdfs:label "isDeleted" ;
+    gep:login_block_condition "value = 1" ;
+    gep:sql_column "isdeleted" ;
+    gep:sql_type "BIT" ;
     rdfs:range [ a rdfs:Datatype ;
             owl:intersectionOf ( xsd:integer [ a rdfs:Datatype ;
                         owl:onDatatype xsd:integer ;
                         owl:withRestrictions ( [ xsd:minInclusive 0 ] ) ] [ a rdfs:Datatype ;
                         owl:onDatatype xsd:integer ;
                         owl:withRestrictions ( [ xsd:maxInclusive 1 ] ) ] ) ] ;
-    skos:definition "SQL BIT — marks the default partner mapping for this user. Exactly one row per userId must have isDefault=1." ;
+    skos:definition "SQL BIT — 1 means account is soft-deleted. Login is blocked when value = 1" ;
     skos:inScheme gep: ;
-    skos:note "Business rule: exactly one isDefault=1 per userId. Multiple rows = data integrity bug." ;
-    skos:prefLabel "Is Default Mapping" ;
-    gep:sql_column "isdefault" ;
-    gep:sql_type "BIT" ;
-    gep:uniqueness_rule "exactly_one_true_per_userId" .
+    skos:prefLabel "Is Deleted" .
 
 gep:isLocked a owl:DatatypeProperty ;
     rdfs:label "isLocked" ;
+    gep:login_block_condition "value = 1" ;
+    gep:sql_column "islocked" ;
+    gep:sql_type "BIT" ;
     rdfs:range [ a rdfs:Datatype ;
             owl:intersectionOf ( xsd:integer [ a rdfs:Datatype ;
                         owl:onDatatype xsd:integer ;
@@ -262,253 +428,144 @@ gep:isLocked a owl:DatatypeProperty ;
                         owl:withRestrictions ( [ xsd:maxInclusive 1 ] ) ] ) ] ;
     skos:definition "SQL BIT — 1 means account is locked. Login is blocked when value = 1" ;
     skos:inScheme gep: ;
-    skos:prefLabel "Is Locked" ;
-    gep:login_block_condition "value = 1" ;
-    gep:sql_column "islocked" ;
-    gep:sql_type "BIT" .
+    skos:prefLabel "Is Locked" .
 
-gep:isMobileNumberVerifiedMongo a owl:DatatypeProperty ;
-    rdfs:label "isMobileNumberVerifiedMongo" ;
-    rdfs:range xsd:boolean ;
-    skos:definition "MongoDB native boolean for mobile number verification. Cross-checked against SQL isMobileNumberVerifiedSQL after BIT normalization." ;
-    skos:inScheme gep: ;
-    skos:prefLabel "Is Mobile Verified (MongoDB)" ;
-    gep:cross_source_check "MobileVerificationStatus.isMobileNumberVerifiedSQL" ;
-    gep:mongo_field "ismobileNumberVerified" ;
-    gep:normalization_note "Compare MongoDB true/false with SQL BIT 1/0 after normalization" .
-
-gep:isMobileNumberVerifiedSQL a owl:DatatypeProperty ;
-    rdfs:label "isMobileNumberVerifiedSQL" ;
-    rdfs:range [ a rdfs:Datatype ;
-            owl:intersectionOf ( xsd:integer [ a rdfs:Datatype ;
-                        owl:onDatatype xsd:integer ;
-                        owl:withRestrictions ( [ xsd:minInclusive 0 ] ) ] [ a rdfs:Datatype ;
-                        owl:onDatatype xsd:integer ;
-                        owl:withRestrictions ( [ xsd:maxInclusive 1 ] ) ] ) ] ;
-    skos:definition "SQL BIT flag for mobile number verification. Cross-checked against MongoDB isMobileNumberVerifiedMongo. Mismatch = data sync issue — report directly, do not escalate to New Relic." ;
-    skos:inScheme gep: ;
-    skos:prefLabel "Is Mobile Verified (SQL)" ;
+gep:isMobileNumberVerified a owl:DatatypeProperty ;
+    rdfs:label "isMobileNumberVerified" ;
     gep:cross_source_check "UserDocument.isMobileNumberVerifiedMongo" ;
     gep:normalization_before_compare "BIT 0→false, 1→true" ;
     gep:sql_column "ismobilenumberverified" ;
-    gep:sql_type "BIT" .
-
-gep:lastName a owl:DatatypeProperty ;
-    rdfs:label "lastName" ;
-    rdfs:range xsd:string ;
-    skos:definition "User last name (SQL)" ;
-    skos:inScheme gep: ;
-    skos:prefLabel "Last Name" ;
-    gep:sql_column "lastName" ;
-    gep:sql_type "NVARCHAR" .
-
-gep:mappingId a owl:DatatypeProperty ;
-    rdfs:label "mappingId" ;
-    rdfs:range xsd:string ;
-    skos:definition "Synthetic composite key for PartnerMapping. Generated as '{userId}_{bpc}_{partnerCode}'. Required because LinkML does not support composite identifiers natively." ;
-    skos:inScheme gep: ;
-    skos:prefLabel "Mapping ID" ;
-    gep:derivation_rule "f'{userId}_{bpc}_{partnerCode}'" ;
-    gep:derived_from "userId + bpc + partnerCode" .
-
-gep:mappingIsActive a owl:DatatypeProperty ;
-    rdfs:label "mappingIsActive" ;
+    gep:sql_type "BIT" ;
     rdfs:range [ a rdfs:Datatype ;
             owl:intersectionOf ( xsd:integer [ a rdfs:Datatype ;
                         owl:onDatatype xsd:integer ;
                         owl:withRestrictions ( [ xsd:minInclusive 0 ] ) ] [ a rdfs:Datatype ;
                         owl:onDatatype xsd:integer ;
                         owl:withRestrictions ( [ xsd:maxInclusive 1 ] ) ] ) ] ;
-    skos:definition "SQL BIT — 1 means this partner mapping row is active. Login blocked if no row with mappingIsActive=1 exists for the user." ;
+    skos:definition "SQL BIT flag for mobile number verification (maps to SQL column isMobileNumberverified). Cross-checked against MongoDB isMobileNumberVerifiedMongo. Mismatch = data sync issue — report directly, do not escalate to New Relic." ;
     skos:inScheme gep: ;
-    skos:prefLabel "Mapping Is Active" ;
+    skos:prefLabel "Is Mobile Verified (SQL)" .
+
+gep:isSystemUser a owl:DatatypeProperty ;
+    rdfs:label "isSystemUser" ;
+    gep:sql_column "issystemuser" ;
+    gep:sql_type "BIT" ;
+    rdfs:range [ a rdfs:Datatype ;
+            owl:intersectionOf ( xsd:integer [ a rdfs:Datatype ;
+                        owl:onDatatype xsd:integer ;
+                        owl:withRestrictions ( [ xsd:minInclusive 0 ] ) ] [ a rdfs:Datatype ;
+                        owl:onDatatype xsd:integer ;
+                        owl:withRestrictions ( [ xsd:maxInclusive 1 ] ) ] ) ] ;
+    skos:definition "SQL BIT — 1 means this is an internal system or service account" ;
+    skos:inScheme gep: ;
+    skos:prefLabel "Is System User" .
+
+gep:lastName a owl:DatatypeProperty ;
+    rdfs:label "lastName" ;
+    gep:mongo_field "lastName" ;
+    gep:sql_column "lastname" ;
+    gep:sql_type "NVARCHAR" ;
+    rdfs:range xsd:string ;
+    skos:definition "User last name — stored in both SQL and MongoDB" ;
+    skos:inScheme gep: ;
+    skos:prefLabel "Last Name" .
+
+gep:mappingIsActive a owl:DatatypeProperty ;
+    rdfs:label "mappingIsActive" ;
     gep:login_block_condition "no row with value = 1 for this userId" ;
     gep:sql_column "isactive" ;
-    gep:sql_type "BIT" .
-
-gep:mongoAuthenticationType a owl:ObjectProperty ;
-    rdfs:label "mongoAuthenticationType" ;
-    rdfs:range gep:AuthenticationTypeEnum ;
-    skos:definition "Authentication type in MongoDB (integer: 1=Password, 2=SSO)" ;
+    gep:sql_type "BIT" ;
+    rdfs:range [ a rdfs:Datatype ;
+            owl:intersectionOf ( xsd:integer [ a rdfs:Datatype ;
+                        owl:onDatatype xsd:integer ;
+                        owl:withRestrictions ( [ xsd:minInclusive 0 ] ) ] [ a rdfs:Datatype ;
+                        owl:onDatatype xsd:integer ;
+                        owl:withRestrictions ( [ xsd:maxInclusive 1 ] ) ] ) ] ;
+    skos:definition "SQL BIT — 1 means this partner mapping row is active (maps to SQL column isActive). Login blocked if no row with mappingIsActive=1 exists for the user." ;
     skos:inScheme gep: ;
-    skos:prefLabel "Authentication Type (MongoDB)" ;
-    gep:mongo_field "authenticationType" ;
-    gep:mongo_type "INT" .
+    skos:prefLabel "Mapping Is Active" .
 
-gep:mongoFirstName a owl:DatatypeProperty ;
-    rdfs:label "mongoFirstName" ;
+gep:userId a owl:DatatypeProperty ;
+    rdfs:label "userId" ;
+    gep:sql_column "userid" ;
+    gep:sql_type "INT" ;
+    rdfs:range xsd:integer ;
+    skos:definition "Auto-increment integer primary key in SQL Server UM_Users",
+        "Unique numeric identifier for a user record in SQL Server" ;
+    skos:inScheme gep: ;
+    skos:prefLabel "User ID" .
+
+gep:userType a owl:ObjectProperty ;
+    rdfs:label "userType" ;
+    gep:mongo_field "userType" ;
+    gep:mongo_type "INT" ;
+    gep:sql_column "usertype" ;
+    gep:sql_type "INT" ;
+    rdfs:range gep:UserTypeEnum ;
+    skos:definition "User category. Integer in both SQL and MongoDB. 0 = Buyer, 1 = Supplier." ;
+    skos:inScheme gep: ;
+    skos:prefLabel "User Type" .
+
+gep:username a owl:DatatypeProperty ;
+    rdfs:label "username" ;
+    gep:cross_source_link "UserDocument.userName" ;
+    gep:sql_column "username" ;
+    gep:sql_type "NVARCHAR" ;
     rdfs:range xsd:string ;
-    skos:definition "First name in MongoDB users document" ;
+    skos:definition "Unique username. Primary cross-source link key to MongoDB users.userName" ;
     skos:inScheme gep: ;
-    skos:prefLabel "First Name (MongoDB)" ;
-    gep:mongo_field "firstName" .
+    skos:note "Case-insensitive. Matches MongoDB userName and normalizedUserName" ;
+    skos:prefLabel "Username" .
 
-gep:mongoLastName a owl:DatatypeProperty ;
-    rdfs:label "mongoLastName" ;
-    rdfs:range xsd:string ;
-    skos:definition "Last name in MongoDB users document" ;
+gep:AuthenticationTypeEnum a owl:Class ;
+    rdfs:label "AuthenticationTypeEnum" ;
+    gep:storage_type "integer" ;
+    owl:unionOf ( <http://gep.com/ontology/login#AuthenticationTypeEnum#NonSSO> <http://gep.com/ontology/login#AuthenticationTypeEnum#SSO> ) ;
+    skos:definition "Authentication mechanism for login. Stored as integer in both SQL and MongoDB.",
+        "Enumeration of allowed authentication mechanisms for user login." ;
     skos:inScheme gep: ;
-    skos:prefLabel "Last Name (MongoDB)" ;
-    gep:mongo_field "lastName" .
+    skos:prefLabel "Authentication Type" ;
+    linkml:permissible_values <http://gep.com/ontology/login#AuthenticationTypeEnum#NonSSO>,
+        <http://gep.com/ontology/login#AuthenticationTypeEnum#SSO> .
 
-gep:normalizedUserName a owl:DatatypeProperty ;
-    rdfs:label "normalizedUserName" ;
-    rdfs:range xsd:string ;
-    skos:definition "Lowercase version of userName. Used for case-insensitive user lookups" ;
-    skos:inScheme gep: ;
-    skos:note "Derived field. Rule: lowercase(userName). Not authored — always computed." ;
-    skos:prefLabel "Normalized Username" ;
-    gep:derivation_rule "lowercase(userName)" ;
-    gep:derived_from "userName" ;
-    gep:mongo_field "normalizedUserName" .
-
-gep:partnerCode a owl:DatatypeProperty ;
-    rdfs:label "partnerCode" ;
-    rdfs:range xsd:string ;
-    skos:definition "Partner code — child code nested under a BPC group",
-        "Specific partner identifier under a BPC group" ;
-    skos:inScheme gep: ;
-    skos:prefLabel "Partner Code" ;
-    gep:hierarchy_role "child" ;
-    gep:parent_slot "bpc" ;
-    gep:sql_column "partnercode" .
-
-gep:userName a owl:DatatypeProperty ;
-    rdfs:label "userName" ;
-    rdfs:range xsd:string ;
-    skos:definition "MongoDB userName field. Cross-source link key to SQL UM_Users.username" ;
-    skos:inScheme gep: ;
-    skos:prefLabel "Username (MongoDB)" ;
-    gep:cross_source_link "User.username" ;
-    gep:mongo_field "userName" .
-
-gep:PartnerMapping a owl:Class ;
-    rdfs:label "PartnerMapping" ;
+gep:UserDocument a owl:Class ;
+    rdfs:label "UserDocument" ;
+    gep:collection "users" ;
+    gep:datasource "mongodb" ;
+    gep:link_key "userName" ;
     rdfs:subClassOf [ a owl:Restriction ;
-            owl:allValuesFrom xsd:string ;
-            owl:onProperty gep:partnerCode ],
-        [ a owl:Restriction ;
-            owl:allValuesFrom xsd:integer ;
-            owl:onProperty gep:userId ],
-        [ a owl:Restriction ;
-            owl:allValuesFrom xsd:string ;
-            owl:onProperty gep:mappingId ],
+            owl:maxCardinality 1 ;
+            owl:onProperty gep:normalizedLastName ],
         [ a owl:Restriction ;
             owl:maxCardinality 1 ;
-            owl:onProperty gep:bpc ],
-        [ a owl:Restriction ;
-            owl:minCardinality 1 ;
-            owl:onProperty gep:userId ],
-        [ a owl:Restriction ;
-            owl:minCardinality 1 ;
-            owl:onProperty gep:bpc ],
+            owl:onProperty gep:mongoIsLocked ],
         [ a owl:Restriction ;
             owl:maxCardinality 1 ;
-            owl:onProperty gep:isDefault ],
-        [ a owl:Restriction ;
-            owl:minCardinality 0 ;
-            owl:onProperty gep:isDefault ],
-        [ a owl:Restriction ;
-            owl:minCardinality 1 ;
-            owl:onProperty gep:mappingId ],
-        [ a owl:Restriction ;
-            owl:allValuesFrom [ a rdfs:Datatype ;
-                    owl:intersectionOf ( xsd:integer [ a rdfs:Datatype ;
-                                owl:onDatatype xsd:integer ;
-                                owl:withRestrictions ( [ xsd:minInclusive 0 ] ) ] [ a rdfs:Datatype ;
-                                owl:onDatatype xsd:integer ;
-                                owl:withRestrictions ( [ xsd:maxInclusive 1 ] ) ] ) ] ;
-            owl:onProperty gep:mappingIsActive ],
-        [ a owl:Restriction ;
-            owl:minCardinality 1 ;
-            owl:onProperty gep:partnerCode ],
-        [ a owl:Restriction ;
-            owl:allValuesFrom xsd:string ;
-            owl:onProperty gep:bpc ],
-        [ a owl:Restriction ;
-            owl:maxCardinality 1 ;
-            owl:onProperty gep:userId ],
-        [ a owl:Restriction ;
-            owl:minCardinality 0 ;
-            owl:onProperty gep:mappingIsActive ],
-        [ a owl:Restriction ;
-            owl:allValuesFrom [ a rdfs:Datatype ;
-                    owl:intersectionOf ( xsd:integer [ a rdfs:Datatype ;
-                                owl:onDatatype xsd:integer ;
-                                owl:withRestrictions ( [ xsd:minInclusive 0 ] ) ] [ a rdfs:Datatype ;
-                                owl:onDatatype xsd:integer ;
-                                owl:withRestrictions ( [ xsd:maxInclusive 1 ] ) ] ) ] ;
-            owl:onProperty gep:isDefault ],
-        [ a owl:Restriction ;
-            owl:maxCardinality 1 ;
-            owl:onProperty gep:mappingId ],
-        [ a owl:Restriction ;
-            owl:allValuesFrom gep:User ;
-            owl:onProperty gep:hasUser ],
-        [ a owl:Restriction ;
-            owl:maxCardinality 1 ;
-            owl:onProperty gep:mappingIsActive ],
-        [ a owl:Restriction ;
-            owl:maxCardinality 1 ;
-            owl:onProperty gep:partnerCode ],
-        [ a owl:Restriction ;
-            owl:maxCardinality 1 ;
-            owl:onProperty gep:hasUser ],
-        [ a owl:Restriction ;
-            owl:minCardinality 0 ;
-            owl:onProperty gep:hasUser ] ;
-    skos:definition "Maps a user to BPC/partner codes — SQL Server Um_Userpartnermapping" ;
-    skos:inScheme gep: ;
-    skos:note "BPC is parent grouping; partnerCode is child under BPC. Exactly one row per user must have isDefault=1. At least one row with mappingIsActive=1 is required for login." ;
-    skos:prefLabel "Partner Mapping" ;
-    gep:datasource "sqlserver" ;
-    gep:foreign_key "userId → User.userId" ;
-    gep:table "Um_Userpartnermapping" .
-
-gep:hasUser a owl:ObjectProperty ;
-    rdfs:label "hasUser" ;
-    rdfs:range gep:User ;
-    owl:inverseOf gep:hasPartnerMappings ;
-    skos:definition "Links a PartnerMapping record to the User it belongs to",
-        "OWL ObjectProperty — semantic link from PartnerMapping to its owning User. In SQL, resolved via the integer userId FK. Not stored as a URI in the database; used by OWL reasoners and the KG to traverse the relationship." ;
-    skos:inScheme gep: ;
-    skos:prefLabel "Has User" ;
-    gep:resolution_via "userId" .
-
-gep:User a owl:Class ;
-    rdfs:label "User" ;
-    rdfs:subClassOf [ a owl:Restriction ;
-            owl:minCardinality 0 ;
-            owl:onProperty gep:hasMobileVerificationStatus ],
-        [ a owl:Restriction ;
-            owl:maxCardinality 1 ;
-            owl:onProperty gep:userId ],
-        [ a owl:Restriction ;
-            owl:allValuesFrom [ a rdfs:Datatype ;
-                    owl:intersectionOf ( xsd:integer [ a rdfs:Datatype ;
-                                owl:onDatatype xsd:integer ;
-                                owl:withRestrictions ( [ xsd:minInclusive 0 ] ) ] [ a rdfs:Datatype ;
-                                owl:onDatatype xsd:integer ;
-                                owl:withRestrictions ( [ xsd:maxInclusive 1 ] ) ] ) ] ;
-            owl:onProperty gep:isLocked ],
-        [ a owl:Restriction ;
-            owl:allValuesFrom xsd:string ;
             owl:onProperty gep:lastName ],
         [ a owl:Restriction ;
-            owl:allValuesFrom xsd:integer ;
-            owl:onProperty gep:userId ],
+            owl:maxCardinality 1 ;
+            owl:onProperty gep:normalizedUserName ],
         [ a owl:Restriction ;
             owl:maxCardinality 1 ;
-            owl:onProperty gep:hasMobileVerificationStatus ],
+            owl:onProperty gep:normalizedFirstName ],
         [ a owl:Restriction ;
-            owl:allValuesFrom gep:AuthenticationTypeEnum ;
+            owl:maxCardinality 1 ;
+            owl:onProperty gep:mongoIsActive ],
+        [ a owl:Restriction ;
+            owl:cardinality 1 ;
+            owl:onProperty gep:emailAddress ],
+        [ a owl:Restriction ;
+            owl:maxCardinality 1 ;
+            owl:onProperty gep:userType ],
+        [ a owl:Restriction ;
+            owl:maxCardinality 1 ;
+            owl:onProperty gep:normalizedFullName ],
+        [ a owl:Restriction ;
+            owl:cardinality 1 ;
             owl:onProperty gep:authenticationType ],
         [ a owl:Restriction ;
-            owl:minCardinality 0 ;
-            owl:onProperty gep:isLocked ],
-        [ a owl:Restriction ;
             owl:maxCardinality 1 ;
-            owl:onProperty gep:isdCode ],
+            owl:onProperty gep:normalizedEmailAddress ],
         [ a owl:Restriction ;
             owl:allValuesFrom [ a rdfs:Datatype ;
                     owl:intersectionOf ( xsd:string [ a rdfs:Datatype ;
@@ -517,37 +574,88 @@ gep:User a owl:Class ;
             owl:onProperty gep:emailAddress ],
         [ a owl:Restriction ;
             owl:maxCardinality 1 ;
-            owl:onProperty gep:firstName ],
-        [ a owl:Restriction ;
-            owl:minCardinality 1 ;
-            owl:onProperty gep:userId ],
+            owl:onProperty gep:mongoIsSystemUser ],
         [ a owl:Restriction ;
             owl:maxCardinality 1 ;
-            owl:onProperty gep:isActive ],
+            owl:onProperty gep:firstName ],
         [ a owl:Restriction ;
-            owl:minCardinality 0 ;
+            owl:cardinality 1 ;
+            owl:onProperty gep:userName ],
+        [ a owl:Restriction ;
+            owl:maxCardinality 1 ;
+            owl:onProperty gep:mongoIsdCode ],
+        [ a owl:Restriction ;
+            owl:maxCardinality 1 ;
+            owl:onProperty gep:mobileNo ],
+        [ a owl:Restriction ;
+            owl:maxCardinality 1 ;
+            owl:onProperty gep:isMobileNumberVerifiedMongo ],
+        gep:AbstractUser ;
+    skos:definition "User document from MongoDB users collection" ;
+    skos:inScheme gep: ;
+    skos:note "Link key to SQL: userName = UM_Users.username. isMobileNumberVerifiedMongo cross-checked with SQL isMobileNumberVerified. isdCode is an embedded object {countryCode, extension}. userPartnerMappings is an array of embedded sub-documents." ;
+    skos:prefLabel "MongoDB User Document" .
+
+gep:UserTypeEnum a owl:Class ;
+    rdfs:label "UserTypeEnum" ;
+    gep:storage_type "integer" ;
+    owl:unionOf ( <http://gep.com/ontology/login#UserTypeEnum#Buyer> <http://gep.com/ontology/login#UserTypeEnum#Supplier> ) ;
+    skos:definition "Category of user in the system. Stored as integer in both SQL and MongoDB.",
+        "Enumeration of user categories — Buyer or Supplier." ;
+    skos:inScheme gep: ;
+    skos:prefLabel "User Type" ;
+    linkml:permissible_values <http://gep.com/ontology/login#UserTypeEnum#Buyer>,
+        <http://gep.com/ontology/login#UserTypeEnum#Supplier> .
+
+gep:isdCode a owl:DatatypeProperty ;
+    rdfs:label "isdCode" ;
+    gep:co_required_with "mobileNumber" ;
+    gep:sql_column "isdcode" ;
+    rdfs:range xsd:string ;
+    skos:definition "International dialing code in SQL (e.g. +91, +1). Co-dependent with mobileNumber" ;
+    skos:example "+91, +1, +44" ;
+    skos:inScheme gep: ;
+    skos:prefLabel "ISD Code (SQL)" .
+
+gep:mobileNo a owl:DatatypeProperty ;
+    rdfs:label "mobileNo" ;
+    gep:co_required_with "mongoIsdCode" ;
+    gep:mongo_field "mobileNo" ;
+    rdfs:range xsd:string ;
+    skos:definition "Mobile number in MongoDB. Co-dependent with mongoIsdCode" ;
+    skos:inScheme gep: ;
+    skos:prefLabel "Mobile No (MongoDB)" .
+
+gep:mobileNumber a owl:DatatypeProperty ;
+    rdfs:label "mobileNumber" ;
+    gep:co_required_with "isdCode" ;
+    gep:sql_column "mobileno" ;
+    rdfs:range xsd:string ;
+    skos:definition "Mobile phone number in SQL. Co-dependent with isdCode" ;
+    skos:inScheme gep: ;
+    skos:prefLabel "Mobile Number (SQL)" .
+
+gep:mongoIsdCode a owl:ObjectProperty ;
+    rdfs:label "mongoIsdCode" ;
+    gep:co_required_with "mobileNo" ;
+    gep:mongo_field "isdCode" ;
+    rdfs:range gep:IsdCode ;
+    skos:definition "Embedded ISD code object {countryCode, extension}. Co-dependent with mobileNo" ;
+    skos:inScheme gep: ;
+    skos:prefLabel "ISD Code (MongoDB)" .
+
+gep:User a owl:Class ;
+    rdfs:label "User" ;
+    gep:datasource "sqlserver" ;
+    gep:link_key "username" ;
+    gep:primary_key "userId" ;
+    gep:table "UM_Users" ;
+    rdfs:subClassOf [ a owl:Restriction ;
+            owl:maxCardinality 1 ;
             owl:onProperty gep:lastName ],
         [ a owl:Restriction ;
-            owl:allValuesFrom gep:PartnerMapping ;
-            owl:onProperty gep:hasPartnerMappings ],
-        [ a owl:Restriction ;
-            owl:allValuesFrom xsd:string ;
-            owl:onProperty gep:mobileNumber ],
-        [ a owl:Restriction ;
-            owl:minCardinality 1 ;
-            owl:onProperty gep:emailAddress ],
-        [ a owl:Restriction ;
             owl:maxCardinality 1 ;
             owl:onProperty gep:mobileNumber ],
-        [ a owl:Restriction ;
-            owl:allValuesFrom gep:MobileVerificationStatus ;
-            owl:onProperty gep:hasMobileVerificationStatus ],
-        [ a owl:Restriction ;
-            owl:maxCardinality 1 ;
-            owl:onProperty gep:isLocked ],
-        [ a owl:Restriction ;
-            owl:minCardinality 0 ;
-            owl:onProperty gep:firstName ],
         [ a owl:Restriction ;
             owl:allValuesFrom [ a rdfs:Datatype ;
                     owl:intersectionOf ( xsd:integer [ a rdfs:Datatype ;
@@ -557,122 +665,89 @@ gep:User a owl:Class ;
                                 owl:withRestrictions ( [ xsd:maxInclusive 1 ] ) ] ) ] ;
             owl:onProperty gep:isActive ],
         [ a owl:Restriction ;
-            owl:minCardinality 1 ;
-            owl:onProperty gep:username ],
-        [ a owl:Restriction ;
-            owl:maxCardinality 1 ;
+            owl:cardinality 1 ;
             owl:onProperty gep:emailAddress ],
         [ a owl:Restriction ;
-            owl:minCardinality 0 ;
+            owl:cardinality 1 ;
+            owl:onProperty gep:userId ],
+        [ a owl:Restriction ;
+            owl:maxCardinality 1 ;
+            owl:onProperty gep:isSystemUser ],
+        [ a owl:Restriction ;
+            owl:allValuesFrom [ a rdfs:Datatype ;
+                    owl:intersectionOf ( xsd:integer [ a rdfs:Datatype ;
+                                owl:onDatatype xsd:integer ;
+                                owl:withRestrictions ( [ xsd:minInclusive 0 ] ) ] [ a rdfs:Datatype ;
+                                owl:onDatatype xsd:integer ;
+                                owl:withRestrictions ( [ xsd:maxInclusive 1 ] ) ] ) ] ;
+            owl:onProperty gep:isLocked ],
+        [ a owl:Restriction ;
+            owl:allValuesFrom [ a rdfs:Datatype ;
+                    owl:intersectionOf ( xsd:integer [ a rdfs:Datatype ;
+                                owl:onDatatype xsd:integer ;
+                                owl:withRestrictions ( [ xsd:minInclusive 0 ] ) ] [ a rdfs:Datatype ;
+                                owl:onDatatype xsd:integer ;
+                                owl:withRestrictions ( [ xsd:maxInclusive 1 ] ) ] ) ] ;
+            owl:onProperty gep:isDeleted ],
+        [ a owl:Restriction ;
+            owl:allValuesFrom [ a rdfs:Datatype ;
+                    owl:intersectionOf ( xsd:integer [ a rdfs:Datatype ;
+                                owl:onDatatype xsd:integer ;
+                                owl:withRestrictions ( [ xsd:minInclusive 0 ] ) ] [ a rdfs:Datatype ;
+                                owl:onDatatype xsd:integer ;
+                                owl:withRestrictions ( [ xsd:maxInclusive 1 ] ) ] ) ] ;
+            owl:onProperty gep:isSystemUser ],
+        [ a owl:Restriction ;
+            owl:maxCardinality 1 ;
+            owl:onProperty gep:isLocked ],
+        [ a owl:Restriction ;
+            owl:maxCardinality 1 ;
             owl:onProperty gep:isdCode ],
         [ a owl:Restriction ;
             owl:maxCardinality 1 ;
+            owl:onProperty gep:isDeleted ],
+        [ a owl:Restriction ;
+            owl:maxCardinality 1 ;
+            owl:onProperty gep:userType ],
+        [ a owl:Restriction ;
+            owl:allValuesFrom [ a rdfs:Datatype ;
+                    owl:intersectionOf ( xsd:string [ a rdfs:Datatype ;
+                                owl:onDatatype xsd:string ;
+                                owl:withRestrictions ( [ xsd:pattern "^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$" ] ) ] ) ] ;
+            owl:onProperty gep:emailAddress ],
+        [ a owl:Restriction ;
+            owl:cardinality 1 ;
             owl:onProperty gep:username ],
         [ a owl:Restriction ;
-            owl:minCardinality 1 ;
-            owl:onProperty gep:authenticationType ],
-        [ a owl:Restriction ;
-            owl:minCardinality 0 ;
-            owl:onProperty gep:isActive ],
-        [ a owl:Restriction ;
-            owl:allValuesFrom xsd:string ;
-            owl:onProperty gep:username ],
-        [ a owl:Restriction ;
-            owl:minCardinality 0 ;
-            owl:onProperty gep:mobileNumber ],
-        [ a owl:Restriction ;
-            owl:allValuesFrom xsd:string ;
+            owl:maxCardinality 1 ;
             owl:onProperty gep:firstName ],
         [ a owl:Restriction ;
-            owl:allValuesFrom xsd:string ;
-            owl:onProperty gep:isdCode ],
-        [ a owl:Restriction ;
-            owl:maxCardinality 1 ;
-            owl:onProperty gep:lastName ],
-        [ a owl:Restriction ;
-            owl:maxCardinality 1 ;
+            owl:cardinality 1 ;
             owl:onProperty gep:authenticationType ],
         [ a owl:Restriction ;
-            owl:minCardinality 0 ;
-            owl:onProperty gep:hasPartnerMappings ],
+            owl:maxCardinality 1 ;
+            owl:onProperty gep:hasMobileVerificationStatus ],
+        [ a owl:Restriction ;
+            owl:maxCardinality 1 ;
+            owl:onProperty gep:isActive ],
         gep:AbstractUser ;
     skos:definition "Core user record from SQL Server UM_Users table" ;
     skos:inScheme gep: ;
-    skos:note "isLocked=1 OR isActive=0 blocks login. username is the cross-source link key to MongoDB users.userName." ;
-    skos:prefLabel "SQL User" ;
-    gep:datasource "sqlserver" ;
-    gep:link_key "username" ;
-    gep:primary_key "userId" ;
-    gep:table "UM_Users" .
+    skos:note "isLocked=1 OR isActive=0 OR isDeleted=1 blocks login. username is the cross-source link key to MongoDB users.userName." ;
+    skos:prefLabel "SQL User" .
 
-gep:isdCode a owl:DatatypeProperty ;
-    rdfs:label "isdCode" ;
-    rdfs:range xsd:string ;
-    skos:definition "International dialing code (e.g. +91, +1). Co-dependent with mobileNumber" ;
-    skos:example "+91, +1, +44" ;
+gep:emailAddress a owl:DatatypeProperty ;
+    rdfs:label "emailAddress" ;
+    gep:mongo_field "emailAddress" ;
+    gep:sql_column "emailaddress" ;
+    gep:sql_type "NVARCHAR" ;
+    rdfs:range [ a rdfs:Datatype ;
+            owl:intersectionOf ( xsd:string [ a rdfs:Datatype ;
+                        owl:onDatatype xsd:string ;
+                        owl:withRestrictions ( [ xsd:pattern "^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$" ] ) ] ) ] ;
+    skos:definition "User email address — stored in both SQL and MongoDB" ;
     skos:inScheme gep: ;
-    skos:prefLabel "ISD Code" ;
-    gep:co_required_with "mobileNumber" ;
-    gep:sql_column "isdCode" .
-
-gep:mobileNo a owl:DatatypeProperty ;
-    rdfs:label "mobileNo" ;
-    rdfs:range xsd:string ;
-    skos:definition "Mobile number in MongoDB. Co-dependent with mongoIsdCode" ;
-    skos:inScheme gep: ;
-    skos:prefLabel "Mobile No (MongoDB)" ;
-    gep:co_required_with "mongoIsdCode" ;
-    gep:mongo_field "mobileNo" .
-
-gep:mobileNumber a owl:DatatypeProperty ;
-    rdfs:label "mobileNumber" ;
-    rdfs:range xsd:string ;
-    skos:definition "Mobile phone number (SQL). Co-dependent with isdCode" ;
-    skos:inScheme gep: ;
-    skos:prefLabel "Mobile Number (SQL)" ;
-    gep:co_required_with "isdCode" ;
-    gep:sql_column "mobileNumber" .
-
-gep:mongoIsdCode a owl:DatatypeProperty ;
-    rdfs:label "mongoIsdCode" ;
-    rdfs:range xsd:string ;
-    skos:definition "International dialing code in MongoDB. Co-dependent with mobileNo" ;
-    skos:inScheme gep: ;
-    skos:prefLabel "ISD Code (MongoDB)" ;
-    gep:co_required_with "mobileNo" ;
-    gep:mongo_field "isdCode" .
-
-gep:AuthenticationTypeEnum a owl:Class ;
-    rdfs:label "AuthenticationTypeEnum" ;
-    owl:unionOf ( <https://gep.com/ontology/login#AuthenticationTypeEnum#Password> <https://gep.com/ontology/login#AuthenticationTypeEnum#SSO> ) ;
-    skos:definition "Authentication mechanism for login. Stored as integer in both SQL and MongoDB.",
-        "Enumeration of allowed authentication mechanisms for user login." ;
-    skos:inScheme gep: ;
-    skos:prefLabel "Authentication Type" ;
-    gep:storage_type "integer" ;
-    linkml:permissible_values <https://gep.com/ontology/login#AuthenticationTypeEnum#Password>,
-        <https://gep.com/ontology/login#AuthenticationTypeEnum#SSO> .
-
-gep:userId a owl:DatatypeProperty ;
-    rdfs:label "userId" ;
-    rdfs:range xsd:integer ;
-    skos:definition "Auto-increment integer primary key in SQL Server UM_Users",
-        "Unique numeric identifier for a user record in SQL Server" ;
-    skos:inScheme gep: ;
-    skos:prefLabel "User ID" ;
-    gep:sql_column "userid" ;
-    gep:sql_type "INT" .
-
-gep:username a owl:DatatypeProperty ;
-    rdfs:label "username" ;
-    rdfs:range xsd:string ;
-    skos:definition "Unique username. Primary cross-source link key to MongoDB users.userName" ;
-    skos:inScheme gep: ;
-    skos:note "Case-insensitive. Matches MongoDB userName and normalizedUserName" ;
-    skos:prefLabel "Username" ;
-    gep:cross_source_link "UserDocument.userName" ;
-    gep:sql_column "username" ;
-    gep:sql_type "NVARCHAR" .
+    skos:prefLabel "Email Address" .
 
 xsd:integer a rdfs:Datatype .
 
@@ -683,13 +758,6 @@ gep: a owl:Ontology ;
     skos:definition "Domain ontology for the Login Query Agent. Models user identity, partner mapping, and mobile verification across SQL Server and MongoDB. Drives datasource routing, SHACL validation, and New Relic escalation rules." .
 
 [] rdfs:subClassOf [ a owl:Restriction ;
-            owl:onProperty gep:isdCode ;
-            owl:someValuesFrom xsd:string ] ;
-    owl:intersectionOf ( [ a owl:Restriction ;
-                owl:onProperty gep:mobileNumber ;
-                owl:someValuesFrom xsd:string ] gep:User ) .
-
-[] rdfs:subClassOf [ a owl:Restriction ;
             owl:onProperty gep:mobileNumber ;
             owl:someValuesFrom xsd:string ] ;
     owl:intersectionOf ( [ a owl:Restriction ;
@@ -697,8 +765,15 @@ gep: a owl:Ontology ;
                 owl:someValuesFrom xsd:string ] gep:User ) .
 
 [] rdfs:subClassOf [ a owl:Restriction ;
-            owl:onProperty gep:mongoIsdCode ;
+            owl:onProperty gep:isdCode ;
             owl:someValuesFrom xsd:string ] ;
+    owl:intersectionOf ( [ a owl:Restriction ;
+                owl:onProperty gep:mobileNumber ;
+                owl:someValuesFrom xsd:string ] gep:User ) .
+
+[] rdfs:subClassOf [ a owl:Restriction ;
+            owl:onProperty gep:mongoIsdCode ;
+            owl:someValuesFrom owl:Thing ] ;
     owl:intersectionOf ( [ a owl:Restriction ;
                 owl:onProperty gep:mobileNo ;
                 owl:someValuesFrom xsd:string ] gep:UserDocument ) .
@@ -708,5 +783,5 @@ gep: a owl:Ontology ;
             owl:someValuesFrom xsd:string ] ;
     owl:intersectionOf ( [ a owl:Restriction ;
                 owl:onProperty gep:mongoIsdCode ;
-                owl:someValuesFrom xsd:string ] gep:UserDocument ) .
+                owl:someValuesFrom owl:Thing ] gep:UserDocument ) .
 

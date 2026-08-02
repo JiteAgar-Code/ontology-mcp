@@ -20,8 +20,9 @@ validation:
 
 new_relic:
   region: "${NEW_RELIC_REGION}"     # resolved from .env at runtime
-  default_lookback: "1 hour ago"
-  max_results: 100
+  default_lookback: "7 days ago"
+  max_lookback_days: 7
+  max_results: 1000
 
 logging:
   level: INFO                       # DEBUG / INFO / WARNING / ERROR

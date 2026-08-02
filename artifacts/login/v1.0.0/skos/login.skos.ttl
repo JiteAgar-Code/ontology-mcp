@@ -1,24 +1,43 @@
-@prefix gep: <https://gep.com/ontology/login#> .
+@prefix gep: <http://gep.com/ontology/login#> .
 @prefix skos: <http://www.w3.org/2004/02/skos/core#> .
 
 gep:AuthenticationTypeEnum a skos:Concept ;
-    skos:definition "Enumeration of allowed authentication mechanisms"@en ;
+    skos:definition "Enumeration of allowed authentication mechanisms (1=Non-SSO, 2=SSO)"@en ;
     skos:inScheme gep:LoginConceptScheme ;
     skos:prefLabel "Authentication Type"@en .
+
+gep:IsdCode a skos:Concept ;
+    skos:definition "Embedded MongoDB object holding countryCode and extension for international dialing"@en ;
+    skos:inScheme gep:LoginConceptScheme ;
+    skos:prefLabel "ISD Code Object"@en .
 
 gep:MobileVerificationStatus a skos:Concept ;
     skos:definition "SQL record of whether a user's mobile number has been verified"@en ;
     skos:inScheme gep:LoginConceptScheme ;
     skos:prefLabel "Mobile Verification Status (SQL)"@en .
 
+gep:MongoPartnerMapping a skos:Concept ;
+    skos:definition "Embedded MongoDB sub-document within userPartnerMappings array"@en ;
+    skos:inScheme gep:LoginConceptScheme ;
+    skos:prefLabel "Mongo Partner Mapping"@en .
+
 gep:PartnerMapping a skos:Concept ;
     skos:definition "Maps a user to one or more BPC and partner codes"@en ;
     skos:inScheme gep:LoginConceptScheme ;
     skos:prefLabel "Partner Mapping"@en .
 
+gep:UserTypeEnum a skos:Concept ;
+    skos:definition "Enumeration of user categories (0=Buyer, 1=Supplier)"@en ;
+    skos:inScheme gep:LoginConceptScheme ;
+    skos:prefLabel "User Type"@en .
+
 gep:authenticationType a skos:Concept ;
     skos:inScheme gep:LoginConceptScheme ;
     skos:prefLabel "Authentication Type"@en .
+
+gep:contactCode a skos:Concept ;
+    skos:inScheme gep:LoginConceptScheme ;
+    skos:prefLabel "Contact Code"@en .
 
 gep:emailAddress a skos:Concept ;
     skos:inScheme gep:LoginConceptScheme ;
@@ -47,34 +66,41 @@ gep:isActive a skos:Concept ;
     skos:inScheme gep:LoginConceptScheme ;
     skos:prefLabel "Is Active"@en .
 
-gep:isDefault a skos:Concept ;
+gep:isDeleted a skos:Concept ;
     skos:inScheme gep:LoginConceptScheme ;
-    skos:note "Business rule: exactly one isDefault=1 per userId. Multiple rows = data integrity bug."@en ;
-    skos:prefLabel "Is Default Mapping"@en .
+    skos:prefLabel "Is Deleted"@en .
 
 gep:isLocked a skos:Concept ;
     skos:inScheme gep:LoginConceptScheme ;
     skos:prefLabel "Is Locked"@en .
 
+gep:isMobileNumberVerified a skos:Concept ;
+    skos:inScheme gep:LoginConceptScheme ;
+    skos:prefLabel "Is Mobile Verified (SQL)"@en .
+
 gep:isMobileNumberVerifiedMongo a skos:Concept ;
     skos:inScheme gep:LoginConceptScheme ;
     skos:prefLabel "Is Mobile Verified (MongoDB)"@en .
 
-gep:isMobileNumberVerifiedSQL a skos:Concept ;
+gep:isSystemUser a skos:Concept ;
     skos:inScheme gep:LoginConceptScheme ;
-    skos:prefLabel "Is Mobile Verified (SQL)"@en .
+    skos:prefLabel "Is System User"@en .
 
 gep:isdCode a skos:Concept ;
     skos:inScheme gep:LoginConceptScheme ;
-    skos:prefLabel "ISD Code"@en .
+    skos:prefLabel "ISD Code (SQL)"@en .
+
+gep:isdCountryCode a skos:Concept ;
+    skos:inScheme gep:LoginConceptScheme ;
+    skos:prefLabel "Country Code"@en .
+
+gep:isdExtension a skos:Concept ;
+    skos:inScheme gep:LoginConceptScheme ;
+    skos:prefLabel "ISD Extension"@en .
 
 gep:lastName a skos:Concept ;
     skos:inScheme gep:LoginConceptScheme ;
     skos:prefLabel "Last Name"@en .
-
-gep:mappingId a skos:Concept ;
-    skos:inScheme gep:LoginConceptScheme ;
-    skos:prefLabel "Mapping ID"@en .
 
 gep:mappingIsActive a skos:Concept ;
     skos:inScheme gep:LoginConceptScheme ;
@@ -88,25 +114,61 @@ gep:mobileNumber a skos:Concept ;
     skos:inScheme gep:LoginConceptScheme ;
     skos:prefLabel "Mobile Number (SQL)"@en .
 
-gep:mongoAuthenticationType a skos:Concept ;
+gep:mongoBpc a skos:Concept ;
     skos:inScheme gep:LoginConceptScheme ;
-    skos:prefLabel "Authentication Type (MongoDB)"@en .
+    skos:prefLabel "BPC (MongoDB)"@en .
 
-gep:mongoFirstName a skos:Concept ;
+gep:mongoContactCode a skos:Concept ;
     skos:inScheme gep:LoginConceptScheme ;
-    skos:prefLabel "First Name (MongoDB)"@en .
+    skos:prefLabel "Contact Code (MongoDB)"@en .
+
+gep:mongoIsActive a skos:Concept ;
+    skos:inScheme gep:LoginConceptScheme ;
+    skos:prefLabel "Is Active (MongoDB)"@en .
+
+gep:mongoIsLocked a skos:Concept ;
+    skos:inScheme gep:LoginConceptScheme ;
+    skos:prefLabel "Is Locked (MongoDB)"@en .
+
+gep:mongoIsSystemUser a skos:Concept ;
+    skos:inScheme gep:LoginConceptScheme ;
+    skos:prefLabel "Is System User (MongoDB)"@en .
 
 gep:mongoIsdCode a skos:Concept ;
     skos:inScheme gep:LoginConceptScheme ;
     skos:prefLabel "ISD Code (MongoDB)"@en .
 
-gep:mongoLastName a skos:Concept ;
+gep:mongoMappingIsActive a skos:Concept ;
     skos:inScheme gep:LoginConceptScheme ;
-    skos:prefLabel "Last Name (MongoDB)"@en .
+    skos:prefLabel "Is Active (Mongo Mapping)"@en .
+
+gep:mongoMappingUserId a skos:Concept ;
+    skos:inScheme gep:LoginConceptScheme ;
+    skos:prefLabel "Mapping User ID (MongoDB)"@en .
+
+gep:mongoPartnerCode a skos:Concept ;
+    skos:inScheme gep:LoginConceptScheme ;
+    skos:prefLabel "Partner Code (MongoDB)"@en .
+
+gep:normalizedEmailAddress a skos:Concept ;
+    skos:inScheme gep:LoginConceptScheme ;
+    skos:prefLabel "Normalized Email Address"@en .
+
+gep:normalizedFirstName a skos:Concept ;
+    skos:inScheme gep:LoginConceptScheme ;
+    skos:prefLabel "Normalized First Name"@en .
+
+gep:normalizedFullName a skos:Concept ;
+    skos:inScheme gep:LoginConceptScheme ;
+    skos:prefLabel "Normalized Full Name"@en .
+
+gep:normalizedLastName a skos:Concept ;
+    skos:inScheme gep:LoginConceptScheme ;
+    skos:prefLabel "Normalized Last Name"@en .
 
 gep:normalizedUserName a skos:Concept ;
     skos:inScheme gep:LoginConceptScheme ;
-    skos:note "Derived field. Rule: lowercase(userName). Not authored — always computed."@en ;
+    skos:note "Always computed: lowercase(userName)"@en ;
     skos:prefLabel "Normalized Username"@en .
 
 gep:userId a skos:Concept ;
@@ -118,9 +180,13 @@ gep:userName a skos:Concept ;
     skos:inScheme gep:LoginConceptScheme ;
     skos:prefLabel "Username (MongoDB)"@en .
 
-gep:userPartnerMapping a skos:Concept ;
+gep:userPartnerMappings a skos:Concept ;
     skos:inScheme gep:LoginConceptScheme ;
-    skos:prefLabel "User Partner Mapping (MongoDB)"@en .
+    skos:prefLabel "User Partner Mappings (MongoDB)"@en .
+
+gep:userType a skos:Concept ;
+    skos:inScheme gep:LoginConceptScheme ;
+    skos:prefLabel "User Type"@en .
 
 gep:username a skos:Concept ;
     skos:inScheme gep:LoginConceptScheme ;
