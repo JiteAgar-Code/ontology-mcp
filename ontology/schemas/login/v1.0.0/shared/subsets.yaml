@@ -1,0 +1,28 @@
+﻿id: http://gep.com/ontology/login/shared/subsets#
+name: login-subsets
+
+prefixes:
+  linkml: "https://w3id.org/linkml/"
+
+default_prefix: http://gep.com/ontology/login/shared/subsets#
+default_range: string
+
+imports:
+  - linkml:types
+
+subsets:
+
+  SqlServerEntities:
+    description: "Entities and properties sourced from SQL Server"
+
+  MongoDBEntities:
+    description: "Entities and properties sourced from MongoDB"
+
+  LoginDiagnostics:
+    description: "Properties directly relevant to diagnosing login failures"
+
+  CrossSourceCheck:
+    description: "Properties that must be compared across SQL and MongoDB"
+
+  OWLObjectProperties:
+    description: "Slots that generate OWL ObjectProperty — semantic relationships between classes"

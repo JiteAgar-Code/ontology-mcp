@@ -1,8 +1,21 @@
-# =============================================================
-# Login Query Agent — Domain Ontology
-# Schema:    schemas/login/v1.0.0/login.yaml
+﻿# =============================================================
+# Login Query Agent — Domain Ontology (root)
+# Schema:    ontology/schemas/login/v1.0.0/login.yaml
 # Version:   1.0.0
 # Standards: LinkML 1.7 · OWL 2 DL · SHACL 1.0 · SKOS
+#
+# This is the root schema file. All entity definitions live
+# in sub-files and are merged via the imports list below.
+#
+# Sub-file layout:
+#   shared/types.yaml            — SqlBit custom type
+#   shared/enums.yaml            — AuthenticationTypeEnum
+#   shared/subsets.yaml          — subset declarations
+#   entities/abstract_user.yaml  — AbstractUser base class
+#   entities/user.yaml           — User (SQL) + slots
+#   entities/partner_mapping.yaml — PartnerMapping (SQL) + slots
+#   entities/mobile_verification.yaml — MobileVerificationStatus (SQL) + slot
+#   entities/user_document.yaml  — UserDocument (MongoDB) + slots
 #
 # NOTE: Annotation keys prefixed with "skos:" (e.g. skos:prefLabel)
 # are treated as plain string keys by standard LinkML generators.
@@ -12,7 +25,7 @@
 # Do not remove the "skos:" prefix — gen_skos.py depends on it.
 # =============================================================
 
-id: https://gep.com/ontology/login#
+id: http://gep.com/ontology/login#
 name: login
 title: Login Query Agent Ontology
 version: "1.0.0"
@@ -24,7 +37,7 @@ description: >-
 
 prefixes:
   linkml: "https://w3id.org/linkml/"
-  gep:    "https://gep.com/ontology/login#"
+  gep:    "http://gep.com/ontology/login#"
   xsd:    "http://www.w3.org/2001/XMLSchema#"
   skos:   "http://www.w3.org/2004/02/skos/core#"
   sh:     "http://www.w3.org/ns/shacl#"
@@ -36,247 +49,23 @@ default_range: string
 
 imports:
   - linkml:types
+  - shared/types
+  - shared/enums
+  - shared/subsets
+  - entities/abstract_user
+  - entities/user
+  - entities/partner_mapping
+  - entities/mobile_verification
+  - entities/user_document
 
 
 # ─────────────────────────────────────────────────────────────
-# CUSTOM TYPES
-# FIX 1: min/max removed from type — not valid on LinkML types.
-#         Added typeof: integer. min/max enforced at each slot.
-# ─────────────────────────────────────────────────────────────
-types:
-
-  SqlBit:
-    typeof: integer
-    uri: xsd:integer
-    description: >-
-      SQL Server BIT — 0 or 1. Normalize to boolean
-      for cross-source comparison with MongoDB.
-    annotations:
-      note: "Normalize: 0→false, 1→true before comparing with MongoDB boolean."
-      sql_type: BIT
-      logical_type: boolean
-
-
-# ─────────────────────────────────────────────────────────────
-# ENUMERATIONS
-# ─────────────────────────────────────────────────────────────
-enums:
-
-  AuthenticationTypeEnum:
-    description: "Authentication mechanism for login. Stored as integer in both SQL and MongoDB."
-    annotations:
-      skos:prefLabel: "Authentication Type"
-      skos:definition: "Enumeration of allowed authentication mechanisms for user login."
-      storage_type: integer
-    permissible_values:
-      Password:
-        description: "Standard username and password authentication"
-        annotations:
-          integer_value: "1"
-          skos:prefLabel: "Password"
-      SSO:
-        description: "Single Sign-On via SAML/OAuth/OIDC"
-        annotations:
-          integer_value: "2"
-          skos:prefLabel: "Single Sign-On"
-
-
-# ─────────────────────────────────────────────────────────────
-# SUBSETS
-# ─────────────────────────────────────────────────────────────
-subsets:
-
-  SqlServerEntities:
-    description: "Entities and properties sourced from SQL Server"
-
-  MongoDBEntities:
-    description: "Entities and properties sourced from MongoDB"
-
-  LoginDiagnostics:
-    description: "Properties directly relevant to diagnosing login failures"
-
-  CrossSourceCheck:
-    description: "Properties that must be compared across SQL and MongoDB"
-
-  OWLObjectProperties:
-    description: "Slots that generate OWL ObjectProperty — semantic relationships between classes"
-
-
-# ─────────────────────────────────────────────────────────────
-# CLASSES
-# ─────────────────────────────────────────────────────────────
-classes:
-
-  # ── Abstract base (OWL superclass) ────────────────────────
-  AbstractUser:
-    abstract: true
-    description: "Abstract base concept — a user account in the system"
-    annotations:
-      skos:prefLabel: "User"
-      skos:definition: "A person who has an account in the system"
-
-  # ── SQL Entity 1: UM_Users ────────────────────────────────
-  User:
-    is_a: AbstractUser
-    in_subset:
-      - SqlServerEntities
-      - LoginDiagnostics
-    description: "Core user record from SQL Server UM_Users table"
-    annotations:
-      skos:prefLabel: "SQL User"
-      skos:note: >-
-        isLocked=1 OR isActive=0 blocks login.
-        username is the cross-source link key to MongoDB users.userName.
-      datasource: sqlserver
-      table: UM_Users
-      primary_key: userId
-      link_key: username
-    slots:
-      - userId
-      - username
-      - emailAddress
-      - firstName
-      - lastName
-      - authenticationType
-      - isLocked
-      - isActive
-      - isdCode
-      - mobileNumber
-      - hasMobileVerificationStatus
-      - hasPartnerMappings              # FIX 4c: added inverse ObjectProperty
-    slot_usage:
-      userId:
-        identifier: true               # FIX 2: identifier scoped to User only
-    rules:
-      - title: isdCode_requires_mobileNumber
-        description: "If isdCode is present, mobileNumber must also be present"
-        preconditions:
-          slot_conditions:
-            isdCode:
-              value_presence: PRESENT
-        postconditions:
-          slot_conditions:
-            mobileNumber:
-              value_presence: PRESENT
-      - title: mobileNumber_requires_isdCode
-        description: "If mobileNumber is present, isdCode must also be present"
-        preconditions:
-          slot_conditions:
-            mobileNumber:
-              value_presence: PRESENT
-        postconditions:
-          slot_conditions:
-            isdCode:
-              value_presence: PRESENT
-
-  # ── SQL Entity 2: Um_Userpartnermapping ──────────────────
-  PartnerMapping:
-    in_subset:
-      - SqlServerEntities
-      - LoginDiagnostics
-    description: "Maps a user to BPC/partner codes — SQL Server Um_Userpartnermapping"
-    annotations:
-      skos:prefLabel: "Partner Mapping"
-      skos:note: >-
-        BPC is parent grouping; partnerCode is child under BPC.
-        Exactly one row per user must have isDefault=1.
-        At least one row with mappingIsActive=1 is required for login.
-      datasource: sqlserver
-      table: Um_Userpartnermapping
-      foreign_key: "userId → User.userId"
-    slots:
-      - mappingId          # FIX 7: synthetic composite identifier
-      - userId
-      - hasUser
-      - bpc
-      - partnerCode
-      - mappingIsActive
-      - isDefault
-    slot_usage:
-      mappingId:
-        identifier: true   # FIX 7: PartnerMapping now has an identifier
-
-  # ── SQL Entity 3: um_usermobileverificationstatus ────────
-  MobileVerificationStatus:
-    in_subset:
-      - SqlServerEntities
-      - LoginDiagnostics
-      - CrossSourceCheck
-    description: "SQL-side mobile verification record — um_usermobileverificationstatus"
-    annotations:
-      skos:prefLabel: "Mobile Verification Status (SQL)"
-      skos:note: >-
-        Cross-checked against MongoDB UserDocument.isMobileNumberVerifiedMongo.
-        A mismatch between the two is reported as a data sync issue.
-      datasource: sqlserver
-      table: um_usermobileverificationstatus
-      foreign_key: "username → User.username"
-    slots:
-      - username
-      - isMobileNumberVerifiedSQL
-    slot_usage:
-      username:
-        # FIX 3: removed identifier: false (not valid LinkML). username is not
-        # marked identifier at global level so no override is needed here.
-        annotations:
-          note: "Foreign key reference to User.username. Not an identifier in this class."
-
-  # ── MongoDB Entity: users collection ─────────────────────
-  UserDocument:
-    is_a: AbstractUser
-    in_subset:
-      - MongoDBEntities
-      - LoginDiagnostics
-    description: "User document from MongoDB users collection"
-    annotations:
-      skos:prefLabel: "MongoDB User Document"
-      skos:note: >-
-        Embeds userPartnerMapping array mirroring SQL Um_Userpartnermapping.
-        isMobileNumberVerifiedMongo cross-checked with SQL isMobileNumberVerifiedSQL.
-      datasource: mongodb
-      collection: users
-      link_key: userName
-    slots:
-      - userName
-      - normalizedUserName
-      - mongoFirstName
-      - mongoLastName
-      - isMobileNumberVerifiedMongo
-      - mongoAuthenticationType
-      - mongoIsdCode
-      - mobileNo
-      - userPartnerMapping
-    rules:
-      - title: mongoIsdCode_requires_mobileNo
-        description: "If mongoIsdCode is present, mobileNo must also be present"
-        preconditions:
-          slot_conditions:
-            mongoIsdCode:
-              value_presence: PRESENT
-        postconditions:
-          slot_conditions:
-            mobileNo:
-              value_presence: PRESENT
-      - title: mobileNo_requires_mongoIsdCode
-        description: "If mobileNo is present, mongoIsdCode must also be present"
-        preconditions:
-          slot_conditions:
-            mobileNo:
-              value_presence: PRESENT
-        postconditions:
-          slot_conditions:
-            mongoIsdCode:
-              value_presence: PRESENT
-
-
-# ─────────────────────────────────────────────────────────────
-# SLOTS
+# OWL OBJECT PROPERTIES
+# Kept in root because they link across entities — defining
+# them here avoids circular imports between entity files.
 # ─────────────────────────────────────────────────────────────
 slots:
 
-  # ── OWL Object Properties ─────────────────────────────────
-
-  # FIX 4: inverse: keyword used instead of owl:inverseOf annotation
   hasUser:
     range: User
     required: false
@@ -292,7 +81,6 @@ slots:
       skos:definition: "Links a PartnerMapping record to the User it belongs to"
       resolution_via: userId
 
-  # FIX 4b: new slot — inverse of hasUser
   hasPartnerMappings:
     range: PartnerMapping
     multivalued: true
@@ -319,312 +107,6 @@ slots:
       skos:prefLabel: "Has Mobile Verification Status"
       skos:definition: "Links a User to their mobile number verification record"
       resolution_via: username
-
-  # ── FIX 7: PartnerMapping composite identifier ────────────
-  mappingId:
-    range: string
-    required: true
-    description: >-
-      Synthetic composite key for PartnerMapping.
-      Generated as '{userId}_{bpc}_{partnerCode}'.
-      Required because LinkML does not support composite identifiers natively.
-    annotations:
-      skos:prefLabel: "Mapping ID"
-      derived_from: "userId + bpc + partnerCode"
-      derivation_rule: "f'{userId}_{bpc}_{partnerCode}'"
-
-  # ── User (SQL) ─────────────────────────────────────────────
-
-  userId:
-    range: integer
-    required: true
-    # identifier: true defined via slot_usage in User class only (FIX 2)
-    in_subset:
-      - LoginDiagnostics
-    description: "Auto-increment integer primary key in SQL Server UM_Users"
-    annotations:
-      skos:prefLabel: "User ID"
-      skos:definition: "Unique numeric identifier for a user record in SQL Server"
-      sql_column: userid
-      sql_type: INT
-
-  username:
-    range: string
-    required: true
-    in_subset:
-      - LoginDiagnostics
-      - CrossSourceCheck
-    description: "Unique username. Primary cross-source link key to MongoDB users.userName"
-    annotations:
-      skos:prefLabel: "Username"
-      skos:note: "Case-insensitive. Matches MongoDB userName and normalizedUserName"
-      sql_column: username
-      sql_type: NVARCHAR
-      cross_source_link: "UserDocument.userName"
-
-  emailAddress:
-    range: string
-    required: true
-    pattern: "^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$"
-    description: "User email address"
-    annotations:
-      skos:prefLabel: "Email Address"
-      sql_column: emailaddress
-      sql_type: NVARCHAR
-
-  firstName:
-    range: string
-    required: false
-    description: "User first name (SQL)"
-    annotations:
-      skos:prefLabel: "First Name"
-      sql_column: firstName
-      sql_type: NVARCHAR
-
-  lastName:
-    range: string
-    required: false
-    description: "User last name (SQL)"
-    annotations:
-      skos:prefLabel: "Last Name"
-      sql_column: lastName
-      sql_type: NVARCHAR
-
-  authenticationType:
-    range: AuthenticationTypeEnum
-    required: true
-    in_subset:
-      - LoginDiagnostics
-    description: >-
-      Authentication mechanism. Integer in both SQL and MongoDB.
-      Validate: allowed values are 1 (Password) or 2 (SSO).
-    annotations:
-      skos:prefLabel: "Authentication Type"
-      sql_column: authenticationtype
-      sql_type: INT
-      mongo_field: authenticationType
-      mongo_type: INT
-
-  # FIX 1: minimum_value/maximum_value moved from type to slot
-  isLocked:
-    range: SqlBit
-    required: false
-    minimum_value: 0
-    maximum_value: 1
-    in_subset:
-      - LoginDiagnostics
-    description: "SQL BIT — 1 means account is locked. Login is blocked when value = 1"
-    annotations:
-      skos:prefLabel: "Is Locked"
-      sql_column: islocked
-      sql_type: BIT
-      login_block_condition: "value = 1"
-
-  isActive:
-    range: SqlBit
-    required: false
-    minimum_value: 0
-    maximum_value: 1
-    in_subset:
-      - LoginDiagnostics
-    description: "SQL BIT — 0 means account is deactivated. Login is blocked when value = 0"
-    annotations:
-      skos:prefLabel: "Is Active"
-      sql_column: isactive
-      sql_type: BIT
-      login_block_condition: "value = 0"
-
-  isdCode:
-    range: string
-    required: false
-    description: "International dialing code (e.g. +91, +1). Co-dependent with mobileNumber"
-    annotations:
-      skos:prefLabel: "ISD Code"
-      skos:example: "+91, +1, +44"
-      sql_column: isdCode
-      co_required_with: mobileNumber
-
-  mobileNumber:
-    range: string
-    required: false
-    description: "Mobile phone number (SQL). Co-dependent with isdCode"
-    annotations:
-      skos:prefLabel: "Mobile Number (SQL)"
-      sql_column: mobileNumber
-      co_required_with: isdCode
-
-  # ── PartnerMapping (SQL) ───────────────────────────────────
-
-  bpc:
-    range: string
-    required: true
-    description: "Business Partner Code — parent grouping above partnerCode"
-    annotations:
-      skos:prefLabel: "BPC"
-      skos:definition: "Higher-level partner grouping. partnerCode is a child of this value."
-      sql_column: bpc
-      hierarchy_role: parent
-
-  partnerCode:
-    range: string
-    required: true
-    description: "Partner code — child code nested under a BPC group"
-    annotations:
-      skos:prefLabel: "Partner Code"
-      skos:definition: "Specific partner identifier under a BPC group"
-      sql_column: partnercode
-      hierarchy_role: child
-      parent_slot: bpc
-
-  # FIX 1: minimum_value/maximum_value moved from type to slot
-  mappingIsActive:
-    range: SqlBit
-    required: false
-    minimum_value: 0
-    maximum_value: 1
-    in_subset:
-      - LoginDiagnostics
-    description: >-
-      SQL BIT — 1 means this partner mapping row is active.
-      Login blocked if no row with mappingIsActive=1 exists for the user.
-    annotations:
-      skos:prefLabel: "Mapping Is Active"
-      sql_column: isactive
-      sql_type: BIT
-      login_block_condition: "no row with value = 1 for this userId"
-
-  isDefault:
-    range: SqlBit
-    required: false
-    minimum_value: 0
-    maximum_value: 1
-    description: >-
-      SQL BIT — marks the default partner mapping for this user.
-      Exactly one row per userId must have isDefault=1.
-    annotations:
-      skos:prefLabel: "Is Default Mapping"
-      skos:note: "Business rule: exactly one isDefault=1 per userId. Multiple rows = data integrity bug."
-      sql_column: isdefault
-      sql_type: BIT
-      uniqueness_rule: exactly_one_true_per_userId
-
-  # ── MobileVerificationStatus (SQL) ────────────────────────
-
-  # FIX 1: minimum_value/maximum_value moved from type to slot
-  isMobileNumberVerifiedSQL:
-    range: SqlBit
-    required: true
-    minimum_value: 0
-    maximum_value: 1
-    in_subset:
-      - LoginDiagnostics
-      - CrossSourceCheck
-    description: >-
-      SQL BIT flag for mobile number verification.
-      Cross-checked against MongoDB isMobileNumberVerifiedMongo.
-      Mismatch = data sync issue — report directly, do not escalate to New Relic.
-    annotations:
-      skos:prefLabel: "Is Mobile Verified (SQL)"
-      sql_column: ismobilenumberverified
-      sql_type: BIT
-      cross_source_check: "UserDocument.isMobileNumberVerifiedMongo"
-      normalization_before_compare: "BIT 0→false, 1→true"
-
-  # ── UserDocument (MongoDB) ────────────────────────────────
-
-  userName:
-    range: string
-    required: true
-    in_subset:
-      - LoginDiagnostics
-      - CrossSourceCheck
-    description: "MongoDB userName field. Cross-source link key to SQL UM_Users.username"
-    annotations:
-      skos:prefLabel: "Username (MongoDB)"
-      mongo_field: userName
-      cross_source_link: "User.username"
-
-  normalizedUserName:
-    range: string
-    required: false
-    description: "Lowercase version of userName. Used for case-insensitive user lookups"
-    annotations:
-      skos:prefLabel: "Normalized Username"
-      skos:note: "Derived field. Rule: lowercase(userName). Not authored — always computed."
-      mongo_field: normalizedUserName
-      derived_from: userName
-      derivation_rule: "lowercase(userName)"
-
-  mongoFirstName:
-    range: string
-    required: false
-    description: "First name in MongoDB users document"
-    annotations:
-      skos:prefLabel: "First Name (MongoDB)"
-      mongo_field: firstName
-
-  mongoLastName:
-    range: string
-    required: false
-    description: "Last name in MongoDB users document"
-    annotations:
-      skos:prefLabel: "Last Name (MongoDB)"
-      mongo_field: lastName
-
-  isMobileNumberVerifiedMongo:
-    range: boolean
-    required: false
-    in_subset:
-      - LoginDiagnostics
-      - CrossSourceCheck
-    description: >-
-      MongoDB native boolean for mobile number verification.
-      Cross-checked against SQL isMobileNumberVerifiedSQL after BIT normalization.
-    annotations:
-      skos:prefLabel: "Is Mobile Verified (MongoDB)"
-      mongo_field: ismobileNumberVerified
-      cross_source_check: "MobileVerificationStatus.isMobileNumberVerifiedSQL"
-      normalization_note: "Compare MongoDB true/false with SQL BIT 1/0 after normalization"
-
-  mongoAuthenticationType:
-    range: AuthenticationTypeEnum
-    required: false
-    description: "Authentication type in MongoDB (integer: 1=Password, 2=SSO)"
-    annotations:
-      skos:prefLabel: "Authentication Type (MongoDB)"
-      mongo_field: authenticationType
-      mongo_type: INT
-
-  mongoIsdCode:
-    range: string
-    required: false
-    description: "International dialing code in MongoDB. Co-dependent with mobileNo"
-    annotations:
-      skos:prefLabel: "ISD Code (MongoDB)"
-      mongo_field: isdCode
-      co_required_with: mobileNo
-
-  mobileNo:
-    range: string
-    required: false
-    description: "Mobile number in MongoDB. Co-dependent with mongoIsdCode"
-    annotations:
-      skos:prefLabel: "Mobile No (MongoDB)"
-      mongo_field: mobileNo
-      co_required_with: mongoIsdCode
-
-  userPartnerMapping:
-    range: PartnerMapping
-    multivalued: true
-    required: false
-    inlined_as_list: true
-    description: >-
-      Embedded array of partner mappings in MongoDB user document.
-      Mirrors the structure of SQL Um_Userpartnermapping.
-    annotations:
-      skos:prefLabel: "User Partner Mapping (MongoDB)"
-      mongo_field: userpartnermapping
-      mirrors_sql_table: Um_Userpartnermapping
 
 
 # ─────────────────────────────────────────────────────────────
@@ -665,7 +147,22 @@ x_skos_scheme:
 
     - id: gep:AuthenticationTypeEnum
       prefLabel: "Authentication Type"
-      definition: "Enumeration of allowed authentication mechanisms"
+      definition: "Enumeration of allowed authentication mechanisms (1=Non-SSO, 2=SSO)"
+      inScheme: gep:LoginConceptScheme
+
+    - id: gep:UserTypeEnum
+      prefLabel: "User Type"
+      definition: "Enumeration of user categories (0=Buyer, 1=Supplier)"
+      inScheme: gep:LoginConceptScheme
+
+    - id: gep:IsdCode
+      prefLabel: "ISD Code Object"
+      definition: "Embedded MongoDB object holding countryCode and extension for international dialing"
+      inScheme: gep:LoginConceptScheme
+
+    - id: gep:MongoPartnerMapping
+      prefLabel: "Mongo Partner Mapping"
+      definition: "Embedded MongoDB sub-document within userPartnerMappings array"
       inScheme: gep:LoginConceptScheme
 
   hierarchies:
@@ -679,38 +176,241 @@ x_skos_scheme:
 
 
 # ─────────────────────────────────────────────────────────────
-# INTENTS  (custom extension — processed by gen_intents.py)
+# CAPABILITY REGISTRY  (replaces x_intents)
+#
+# Intent classification is now LLM-native — the agent classifies the
+# user's complaint into a `category` itself (zero tool calls). It then
+# calls get_diagnosis_plan(category) ONCE to retrieve the playbook below.
+#
+# The `covers` field is DESCRIPTIVE METADATA ONLY. It is NOT string-matched.
+# It documents what each capability handles, for the agent's reasoning and
+# for developers.
+#
+# Each capability defines the diagnosis playbook:
+#   required_entities   — which entities the data-mcp tools must fetch
+#   validation_sequence — which SHACL shapes validate_login_shapes runs (in order)
+#   datasources         — primary (always) + conditional (New Relic, on all-pass)
+#   newrelic_tool       — which data-mcp NR tool to call on all_shapes_pass
+#                         (null → no New Relic escalation for this category)
+#   required_parameters — values the agent must obtain from the user if missing
+#
+# Read directly from this YAML by mcp_server.registry.schema_registry
+# (load_capability_registry) — NOT via Fuseki. No KG reload needed to change it.
 # ─────────────────────────────────────────────────────────────
-x_intents:
+x_capability_registry:
 
-  - id: intent_diagnose_login_failure
-    name: DiagnoseLoginFailure
-    description: "Diagnose why a specific user cannot login"
-    match_patterns:
-      - "user cannot login"
-      - "can't login"
+  - id: cap_diagnose_login
+    category: login_failure
+    description: "Account cannot authenticate — login blocked, SSO failure, credentials rejected, cannot access the application"
+    covers:
+      - "cannot login"
       - "unable to login"
       - "login not working"
-      - "login issue"
-      - "login failure"
-      - "why can't {username} login"
-      - "login problem"
-      - "user login failed"
-    entities:
+      - "authentication failure"
+      - "SSO failure"
+      - "credentials not working"
+      - "cannot access the application"
+    required_parameters:
+      - name: username
+        type: string
+        prompt_if_missing: "Please provide the username or email address of the user who cannot login."
+        alternatives:
+          - emailAddress
+    required_entities:
       - User
       - PartnerMapping
       - MobileVerificationStatus
       - UserDocument
     validation_sequence:
       - LoginBlockShape
+      - SystemUserShape
+      - BuyerSSOShape
       - PartnerMappingShape
-      - DefaultPartnerShape
+      - SupplierPartnerMappingShape
       - MobileConsistencyShape
-    primary_datasources:
-      - sqlserver
-      - mongodb
-    conditional_datasources:
-      - newrelic
+      - PartnerMappingDataSyncShape
+    datasources:
+      primary: [sqlserver, mongodb]
+      conditional: [newrelic]
+    newrelic_tool: query_newrelic_login_mfa   # dr_010
+
+  - id: cap_diagnose_password_reset
+    category: password_reset
+    description: "Password reset flow not working — reset link/email not received, forgot password failure, cannot reset password"
+    covers:
+      - "reset password link not received"
+      - "forgot password not working"
+      - "password reset email not delivered"
+      - "cannot reset password"
+      - "password recovery"
+    required_parameters:
+      - name: username
+        type: string
+        prompt_if_missing: "Please provide the username or email address of the user who is not receiving the reset password link."
+        alternatives:
+          - emailAddress
+    required_entities:
+      - User
+      - UserDocument
+    validation_sequence:
+      - LoginBlockShape
+      - SystemUserShape
+      - EmailVerificationShape
+    datasources:
+      primary: [sqlserver, mongodb]
+      conditional: [newrelic]
+    newrelic_tool: query_newrelic_reset_password   # dr_011
+    additional_checks:
+      - verify_registered_email
+
+  - id: cap_diagnose_otp_email
+    category: otp_email
+    description: "OTP email not received during password reset — one-time-password email not delivered"
+    covers:
+      - "otp email not received"
+      - "one time password email not received"
+      - "password reset otp not received"
+    required_parameters:
+      - name: username
+        type: string
+        prompt_if_missing: "Please provide the username or email address of the user who is not receiving the OTP email."
+        alternatives:
+          - emailAddress
+    required_entities:
+      - User
+      - UserDocument
+    validation_sequence:
+      - LoginBlockShape
+      - SystemUserShape
+      - EmailVerificationShape
+    datasources:
+      primary: [sqlserver, mongodb]
+      conditional: [newrelic]
+    newrelic_tool: query_newrelic_reset_password   # dr_011
+    additional_checks:
+      - verify_registered_email
+
+  - id: cap_diagnose_sms_otp
+    category: sms_otp
+    description: "SMS OTP not received even though the mobile number is verified"
+    covers:
+      - "sms otp not received"
+      - "mobile otp not received"
+      - "mobile verified but no otp"
+    required_parameters:
+      - name: username
+        type: string
+        prompt_if_missing: "Please provide the username or email address of the user who is not receiving the SMS OTP."
+        alternatives:
+          - emailAddress
+    required_entities:
+      - User
+      - MobileVerificationStatus
+      - UserDocument
+    validation_sequence:
+      - LoginBlockShape
+      - SystemUserShape
+      - MobileConsistencyShape
+    datasources:
+      primary: [sqlserver, mongodb]
+      conditional: [newrelic]
+    newrelic_tool: query_newrelic_login_mfa   # dr_010
+
+  - id: cap_diagnose_account_state
+    category: account_state
+    description: "Account lifecycle issues — deactivated, inactive, suspended, disabled"
+    covers:
+      - "account deactivated"
+      - "user inactive"
+      - "account suspended"
+      - "user disabled"
+    required_parameters:
+      - name: username
+        type: string
+        prompt_if_missing: "Please provide the username or email address of the affected user."
+        alternatives:
+          - emailAddress
+    required_entities:
+      - User
+      - UserDocument
+    validation_sequence:
+      - LoginBlockShape
+      - SystemUserShape
+    datasources:
+      primary: [sqlserver, mongodb]
+    newrelic_tool: null
+
+  - id: cap_diagnose_account_locked
+    category: account_locked
+    description: "Account got locked after multiple failed login attempts"
+    covers:
+      - "account locked"
+      - "locked after multiple attempts"
+      - "too many failed attempts"
+    required_parameters:
+      - name: username
+        type: string
+        prompt_if_missing: "Please provide the username or email address of the locked user."
+        alternatives:
+          - emailAddress
+    required_entities:
+      - User
+      - UserDocument
+    validation_sequence:
+      - LoginBlockShape
+    datasources:
+      primary: [sqlserver, mongodb]
+    newrelic_tool: null
+
+  - id: cap_diagnose_partner_mapping
+    category: partner_mapping
+    description: "Partner / BPC mapping issues — missing mapping, no active mapping, invalid BPC"
+    covers:
+      - "no partner mapping"
+      - "BPC issue"
+      - "partner code missing"
+      - "inactive partner mapping"
+    required_parameters:
+      - name: username
+        type: string
+        prompt_if_missing: "Please provide the username or email address of the affected user."
+        alternatives:
+          - emailAddress
+    required_entities:
+      - User
+      - PartnerMapping
+    validation_sequence:
+      - PartnerMappingShape
+      - SupplierPartnerMappingShape
+    datasources:
+      primary: [sqlserver]
+    newrelic_tool: null
+
+  - id: cap_diagnose_data_sync
+    category: data_sync
+    description: "SQL–MongoDB data inconsistency — field mismatch between the two sources"
+    covers:
+      - "data mismatch"
+      - "SQL MongoDB inconsistency"
+      - "mobile verification mismatch"
+      - "partner mapping data mismatch"
+    required_parameters:
+      - name: username
+        type: string
+        prompt_if_missing: "Please provide the username or email address of the affected user."
+        alternatives:
+          - emailAddress
+    required_entities:
+      - User
+      - UserDocument
+      - MobileVerificationStatus
+      - PartnerMapping
+    validation_sequence:
+      - MobileConsistencyShape
+      - PartnerMappingDataSyncShape
+    datasources:
+      primary: [sqlserver, mongodb]
+    newrelic_tool: null
 
 
 # ─────────────────────────────────────────────────────────────
@@ -721,78 +421,440 @@ x_decision_rules:
   - id: dr_001
     name: EscalateToNewRelic
     description: >-
-      When all SHACL shapes pass (user data looks correct in both SQL and MongoDB),
-      escalate to New Relic to find a runtime or infrastructure root cause.
+      Generic fallback: when all SHACL shapes pass and no intent-specific New Relic
+      rule applies (dr_010, dr_011), query New Relic Log table for general activity.
+      Intent-specific rules (dr_010 for MFA/login, dr_011 for reset password)
+      take precedence over this rule when their applies_to_intents match.
+      Max lookback: 7 days. Ask for username/email if not already provided.
     trigger: ALL_SHAPES_PASS
     action: query_newrelic
+    required_parameters:
+      - name: username
+        prompt_if_missing: "Please provide the username or email address to query New Relic."
+    max_lookback_days: 7
     nrql_template: >-
-      SELECT * FROM Log WHERE username = '{username}' SINCE 1 hour ago
-    priority: 1
+      SELECT * FROM Log WHERE username = '{username}' SINCE 7 days ago LIMIT MAX
 
   - id: dr_002
     name: ReportMobileVerificationMismatch
     description: >-
-      When SQL ismobilenumberverified and MongoDB ismobileNumberVerified diverge,
-      report the data sync issue directly. Do not escalate to New Relic.
-    trigger: CROSS_SOURCE_MISMATCH
+      When MobileConsistencyShape fails (SQL isMobileNumberVerified and MongoDB
+      isMobileNumberVerified diverge), report the data sync issue directly.
+    trigger: SHAPE_VIOLATION
+    shape: MobileConsistencyShape
     fields:
-      - MobileVerificationStatus.isMobileNumberVerifiedSQL
+      - MobileVerificationStatus.isMobileNumberVerified
       - UserDocument.isMobileNumberVerifiedMongo
     action: report_mismatch
-    message_template: >-
-      Data sync issue for user '{username}':
-      SQL isMobileNumberVerified={sql_value},
-      MongoDB ismobileNumberVerified={mongo_value}.
-    priority: 2
 
   - id: dr_003
     name: ReportLoginBlocked
     description: >-
-      When LoginBlockShape fails (account locked or deactivated),
+      When LoginBlockShape fails (account locked, deactivated, or deleted),
       report the specific reason. Do not escalate to New Relic.
     trigger: SHAPE_VIOLATION
     shape: LoginBlockShape
     action: report_block_reason
-    message_template: "Login blocked for '{username}': {violation_message}"
-    priority: 3
 
   - id: dr_004
     name: ReportNoActivePartnerMapping
     description: >-
-      When PartnerMappingShape fails (no active partner mapping row exists),
-      report missing partner mapping. Do not escalate to New Relic.
+      When PartnerMappingShape fails (no active partner mapping row exists for any user),
+      report missing partner mapping.
     trigger: SHAPE_VIOLATION
     shape: PartnerMappingShape
     action: report_block_reason
-    message_template: "Login blocked for '{username}': No active partner mapping found."
-    priority: 4
+
+  - id: dr_005
+    name: ReportSystemUserBlocked
+    description: >-
+      When SystemUserShape fails (isSystemUser=1),
+      report that system accounts cannot login via the user-facing login flow.
+    trigger: SHAPE_VIOLATION
+    shape: SystemUserShape
+    action: report_block_reason
+
+  - id: dr_006
+    name: ReportBuyerSSOBlocked
+    description: >-
+      When BuyerSSOShape fails (userType=Buyer AND authenticationType=SSO),
+      report that Buyer SSO users cannot login via standard authentication.
+    trigger: SHAPE_VIOLATION
+    shape: BuyerSSOShape
+    action: report_block_reason
+
+  - id: dr_007
+    name: ReportSupplierNoValidPartner
+    description: >-
+      When SupplierPartnerMappingShape fails (Supplier with no active partner mapping
+      with non-zero BPC), report invalid partner configuration.
+      Supplier cannot login or receive any system emails.
+    trigger: SHAPE_VIOLATION
+    shape: SupplierPartnerMappingShape
+    action: report_block_reason
+
+  - id: dr_008
+    name: ReportPartnerMappingDataMismatch
+    description: >-
+      When PartnerMappingDataSyncShape fails (SQL UM_UserPartnermapping and MongoDB
+      userPartnerMappings are out of sync), report the data sync issue.
+      Fields compared: isActive, contactCode, bpc, partnerCode (userId excluded).
+    trigger: SHAPE_VIOLATION
+    shape: PartnerMappingDataSyncShape
+    fields:
+      - PartnerMapping.bpc
+      - PartnerMapping.partnerCode
+      - PartnerMapping.mappingIsActive
+      - PartnerMapping.contactCode
+    action: report_mismatch
+
+  - id: dr_009
+    name: SendLockEmail
+    description: >-
+      DEFERRED — requires EmailTemplate entity (table structure TBD with user).
+      When account is locked (LoginBlockShape isLocked=1) AND the lock email
+      template is active on the user's domain, trigger send_lock_email action
+      so the user can receive a link to reset their password.
+    trigger: SHAPE_VIOLATION
+    shape: LoginBlockShape
+    condition: isLocked_equals_1
+    action: check_and_send_lock_email
+    status: DEFERRED
+
+  - id: dr_010
+    name: DiagnoseLoginMFAViaNewRelic
+    description: >-
+      When all shapes pass for login or OTP intents, query New Relic Transaction table
+      for /Account/Login URI to get RequiresTwoFactor and TwoFactorDetails, then query
+      Log table by traceId for OTP delivery status, domain, and SMS reason.
+      Max lookback: 7 days. Ask for username/email if not already provided.
+    trigger: ALL_SHAPES_PASS
+    applies_to_intents:
+      - intent_diagnose_login_failure
+      - intent_diagnose_sms_otp
+    action: query_newrelic_2step
+    required_parameters:
+      - name: username
+        prompt_if_missing: "Please provide the username or email address to query New Relic."
+    max_lookback_days: 7
+    request_uri: "/Account/Login"
+    nrql_step1:
+      description: "Query Transaction table for login attempts by username"
+      template: >-
+        SELECT LoginUserName, traceId, RequiresTwoFactor, TwoFactorDetails
+        FROM Transaction
+        WHERE request.uri LIKE '%/Account/Login%'
+        AND appName LIKE '%{env}%'
+        AND LoginUserName = '{username}'
+        SINCE 7 days ago
+        LIMIT MAX
+      columns:
+        - LoginUserName
+        - traceId
+        - RequiresTwoFactor
+        - TwoFactorDetails
+    nrql_step2:
+      description: "Query Log table by traceId from Step 1 result"
+      template: >-
+        SELECT *
+        FROM Log
+        WHERE `trace.id` = '{traceId}'
+        SINCE {transaction_timeframe}
+        LIMIT MAX
+      columns_of_interest:
+        - domain
+        - failureReason
+        - smsReason
+      note: "{transaction_timeframe} is derived from the timestamp of the matched transaction row"
+    sub_checks:
+      - id: check_mfa_not_enabled
+        condition: "RequiresTwoFactor is false or absent in transaction result"
+        diagnosis: "MFA (Two-Factor Authentication) is not enabled for this user or domain."
+        action: report_mfa_not_enabled
+        message_template: >-
+          MFA is not enabled for '{username}'. If MFA is expected, verify domain
+          configuration for two-factor authentication.
+
+      - id: check_mfa_template_disabled
+        condition: >-
+          RequiresTwoFactor = true AND Log shows no OTP event OR
+          Log shows template disabled for the domain in TwoFactorDetails
+        diagnosis: >-
+          MFA is enabled but template MFAVERIFICATION-428-01 is disabled on the domain
+          from which the OTP is being triggered. OTP cannot be sent while the template is inactive.
+        action: report_template_disabled
+        message_template: >-
+          MFA OTP not sent for '{username}': Template MFAVERIFICATION-428-01 is disabled
+          on the triggering domain. Enable the template or contact the domain administrator.
+
+      - id: check_two_factor_details
+        condition: "RequiresTwoFactor = true AND TwoFactorDetails is present in transaction"
+        diagnosis: >-
+          MFA triggered. TwoFactorDetails identifies the domain and delivery mode.
+          Check Log table for OTP delivery outcome.
+        action: analyze_two_factor_delivery
+        message_template: >-
+          MFA triggered for '{username}' with details: {TwoFactorDetails}.
+          Checking Log table for delivery status.
+
+      - id: check_wrong_contact_registered
+        condition: "Log shows OTP dispatched to a different email or mobile than user reports"
+        diagnosis: >-
+          Incorrect email address or mobile number is registered in the system.
+          The OTP is being sent to a contact that the user no longer has access to.
+        action: verify_contact_info_with_user
+        message_template: >-
+          MFA OTP for '{username}' is being delivered to a different contact than expected.
+          Ask the user to confirm their registered email address and mobile number.
+
+      - id: check_sms_not_delivered
+        condition: "Log shows smsReason indicates failure or SMS OTP not delivered"
+        diagnosis: >-
+          Mobile number is verified in the system but SMS OTP was not delivered.
+          Possible causes: network issue, SMS gateway failure, or carrier blocking.
+          Check smsReason in Log for the specific failure detail.
+        action: report_sms_delivery_failure
+        message_template: >-
+          SMS OTP triggered for '{username}' but not delivered.
+          smsReason: {smsReason}. Verify mobile number and check SMS gateway status.
+
+      - id: check_mobile_replaced
+        condition: >-
+          Log shows OTP sent but user reports not receiving it on current device
+        diagnosis: >-
+          OTP was sent to the registered mobile number but the user may have replaced
+          their mobile device or SIM. The registered number must be validated with the user.
+        action: validate_mobile_number_with_user
+        message_template: >-
+          MFA OTP for '{username}' was triggered but not received on current device.
+          Validate that the registered mobile still belongs to the user.
+          If replaced, update the registered mobile number.
+
+  - id: dr_011
+    name: DiagnoseResetPasswordViaNewRelic
+    description: >-
+      When all shapes pass for reset password or OTP email intents, query New Relic Transaction
+      table for all three reset password URIs (/Account/RecoverPassword, /Account/PreResetPassword,
+      /Account/ResetPassword) to trace the full reset flow, then query Log table by traceId
+      for email delivery status and failure reasons. Max lookback: 7 days.
+      Ask for username/email if not already provided.
+    trigger: ALL_SHAPES_PASS
+    applies_to_intents:
+      - intent_diagnose_reset_password_link
+      - intent_diagnose_otp_email
+    action: query_newrelic_2step
+    required_parameters:
+      - name: username
+        prompt_if_missing: "Please provide the username or email address to query New Relic."
+        alternatives:
+          - name: emailAddress
+            prompt_if_missing: "Please provide the email address if username is unavailable."
+    max_lookback_days: 7
+    nrql_uris:
+      - uri: "/Account/RecoverPassword"
+        description: "Forgot-password step — checks if reset email was triggered"
+        nrql_step1:
+          template: >-
+            SELECT traceId, errorMessage, RecoveryUserName, RecoveryEmail
+            FROM Transaction
+            WHERE request.uri LIKE '%/Account/RecoverPassword%'
+            AND appName LIKE '%{env}%'
+            AND (RecoveryUserName = '{username}' OR RecoveryEmail = '{emailAddress}')
+            SINCE 7 days ago
+            LIMIT MAX
+          columns:
+            - traceId
+            - errorMessage
+            - RecoveryUserName
+            - RecoveryEmail
+        nrql_step2:
+          template: >-
+            SELECT *
+            FROM Log
+            WHERE `trace.id` = '{traceId}'
+            SINCE {transaction_timeframe}
+            LIMIT MAX
+          columns_of_interest:
+            - domain
+            - failureReason
+            - emailStatus
+
+      - uri: "/Account/PreResetPassword"
+        description: "Link validation step — user clicked the reset password link in email"
+        nrql_step1:
+          template: >-
+            SELECT traceId, errorMessage, PreResetUserName
+            FROM Transaction
+            WHERE request.uri LIKE '%/Account/PreResetPassword%'
+            AND appName LIKE '%{env}%'
+            AND PreResetUserName = '{username}'
+            SINCE 7 days ago
+            LIMIT MAX
+          columns:
+            - traceId
+            - errorMessage
+            - PreResetUserName
+        nrql_step2:
+          template: >-
+            SELECT *
+            FROM Log
+            WHERE `trace.id` = '{traceId}'
+            SINCE {transaction_timeframe}
+            LIMIT MAX
+          columns_of_interest:
+            - errorDetail
+            - failureReason
+
+      - uri: "/Account/ResetPassword"
+        description: "Password reset completion step — user submitted the new password form"
+        nrql_step1:
+          template: >-
+            SELECT LoginUserName, traceId, errorMessage
+            FROM Transaction
+            WHERE request.uri LIKE '%/Account/ResetPassword%'
+            AND appName LIKE '%{env}%'
+            AND LoginUserName = '{username}'
+            SINCE 7 days ago
+            LIMIT MAX
+          columns:
+            - LoginUserName
+            - traceId
+            - errorMessage
+        nrql_step2:
+          template: >-
+            SELECT *
+            FROM Log
+            WHERE `trace.id` = '{traceId}'
+            SINCE {transaction_timeframe}
+            LIMIT MAX
+          columns_of_interest:
+            - errorDetail
+            - failureReason
+
+    sub_checks:
+      - id: check_no_recover_event
+        uri: "/Account/RecoverPassword"
+        condition: "No Transaction found for /Account/RecoverPassword in the last 7 days for this user"
+        diagnosis: >-
+          No forgot-password attempt was recorded. The user may not have submitted the
+          forgot-password request, or the request failed before reaching the application.
+        action: report_no_recovery_triggered
+        message_template: >-
+          No password recovery request found for '{username}' in the last 7 days.
+          Ask the user to retry the forgot-password flow.
+
+      - id: check_email_triggered_wrong_domain
+        uri: "/Account/RecoverPassword"
+        condition: >-
+          RecoverPassword Transaction found AND Log shows email triggered from a domain
+          where the reset password email template is not enabled
+        diagnosis: >-
+          Reset password email was triggered from a domain where the email template is
+          not enabled. The email will not be sent from an unconfigured domain.
+        action: report_domain_template_mismatch
+        message_template: >-
+          Reset password email for '{username}' triggered from a domain where the
+          template is not enabled. Verify and enable the template for that domain.
+
+      - id: check_email_not_delivered
+        uri: "/Account/RecoverPassword"
+        condition: >-
+          RecoverPassword Transaction found AND Log shows email triggered with correct domain
+          AND template but delivery status indicates not delivered
+        diagnosis: >-
+          Reset password email was triggered successfully but not delivered to the user.
+          This is a delivery-layer issue beyond the application. Escalate to IT support.
+        action: escalate_to_it_support
+        message_template: >-
+          Reset password email for '{username}' was triggered but not delivered.
+          Escalate to IT/email support team for delivery investigation.
+
+      - id: check_link_expired
+        uri: "/Account/PreResetPassword"
+        condition: >-
+          PreResetPassword Transaction found AND errorMessage indicates link expired,
+          invalid token, or link already used
+        diagnosis: >-
+          The reset password link has expired or is no longer valid. Reset links are
+          single-use and expire after a fixed validity window.
+        action: report_link_expired
+        message_template: >-
+          Reset password link for '{username}' has expired or is invalid.
+          Ask the user to request a new password reset link.
+
+      - id: check_pre_reset_error
+        uri: "/Account/PreResetPassword"
+        condition: >-
+          PreResetPassword Transaction found AND errorMessage is non-empty AND
+          not a link expiry error
+        diagnosis: >-
+          An error occurred when the user opened the reset password link.
+          Check errorMessage and Log table for the specific cause.
+        action: query_logs_for_error_detail
+        message_template: >-
+          Error opening reset link for '{username}': {errorMessage}. Checking logs for
+          additional detail.
+
+      - id: check_reset_submission_error
+        uri: "/Account/ResetPassword"
+        condition: "ResetPassword Transaction found AND errorMessage is non-empty"
+        diagnosis: >-
+          An error occurred during the password reset submission step.
+          Check errorMessage and Log table for the specific failure reason.
+        action: query_logs_for_error_detail
+        message_template: >-
+          Error during password reset for '{username}': {errorMessage}. Checking logs
+          for additional detail.
+
+      - id: check_no_reset_completion
+        uri: "/Account/ResetPassword"
+        condition: >-
+          RecoverPassword Transaction found AND PreResetPassword Transaction found
+          BUT no ResetPassword Transaction found in last 7 days
+        diagnosis: >-
+          User received the reset email and opened the link, but did not complete
+          the password reset form submission.
+        action: report_reset_not_completed
+        message_template: >-
+          '{username}' opened the reset link but did not complete the password reset.
+          Ask the user to complete the password reset form.
+
+  - id: dr_012
+    name: ReportEmailMismatch
+    description: >-
+      ADVISORY (not a login block). When the identifier the user provided is an
+      email address that does NOT match the registered emailAddress on the account,
+      surface the mismatch. A password reset / OTP email would be delivered to the
+      REGISTERED address, not the queried one. The user may be asking about the
+      wrong account, or the registered email may be outdated.
+      Only fires when the provided identifier contains '@' (looks like an email);
+      a username that legitimately differs from the email does not trigger this.
+    trigger: EMAIL_INPUT_MISMATCH
+    fields:
+      - input_identifier
+      - User.emailAddress
+    action: report_email_mismatch_advisory
+    severity: advisory
 
 
 # ─────────────────────────────────────────────────────────────
-# SHACL RULES  (FIX 6 — processed by gen_shacl.py)
+# SHACL RULES  (custom extension — processed by gen_shacl.py)
 #
-# IMPORTANT: Standard `gen-shacl` from LinkML only generates:
-#   - sh:minCount   (from required: true)
-#   - sh:datatype   (from range types)
-#   - sh:pattern    (from pattern fields)
-#   - sh:class      (from range: ClassName)
-#
-# It does NOT generate the rules below. These require our
-# custom gen_shacl.py pipeline which reads x_shacl_rules
-# and produces:
-#   - LoginBlockShape       (sh:in constraints)
-#   - PartnerMappingShape   (SPARQL-based group constraint)
-#   - DefaultPartnerShape   (SPARQL-based group constraint)
-#   - MobileConsistencyShape (custom Python — not SHACL at all)
-#
-# Build dependency: gen_shacl.py MUST run after LinkML gen-shacl
-# to merge standard + custom shapes into final output file.
+# Evaluation order for login failure:
+#   1. LoginBlockShape      — locked / inactive / deleted
+#   2. SystemUserShape      — system accounts blocked
+#   3. BuyerSSOShape        — Buyer + SSO blocked
+#   4. PartnerMappingShape  — no active partner mapping (any user)
+#   5. SupplierPartnerMappingShape — Supplier with no valid BPC
+#   6. EmailVerificationShape     — valid registered email (reset/OTP flows)
+#   7. MobileConsistencyShape     — SQL vs MongoDB mobile sync
+#   8. PartnerMappingDataSyncShape — SQL vs MongoDB partner sync
 # ─────────────────────────────────────────────────────────────
 x_shacl_rules:
 
   - id: LoginBlockShape
     target_class: User
-    description: "User must not be locked and must be active to permit login"
+    description: "User must not be locked, must be active, and must not be deleted to permit login"
     constraints:
       - type: sh_in
         property: isLocked
@@ -804,6 +866,36 @@ x_shacl_rules:
         allowed_values: [1]
         datatype: xsd:integer
         message: "Account is deactivated (isActive=0). Login blocked."
+      - type: sh_in
+        property: isDeleted
+        allowed_values: [0]
+        datatype: xsd:integer
+        message: "Account is deleted (isDeleted=1). Login blocked."
+
+  - id: SystemUserShape
+    target_class: User
+    description: "System user accounts cannot login via the standard user-facing login flow"
+    constraints:
+      - type: sh_in
+        property: isSystemUser
+        allowed_values: [0]
+        datatype: xsd:integer
+        message: "System user account (isSystemUser=1). Login blocked."
+
+  - id: BuyerSSOShape
+    target_class: User
+    description: >-
+      Buyer users with SSO authentication cannot login via the standard login flow.
+      Buyer SSO accounts authenticate through a separate SSO path.
+    constraints:
+      - type: sparql
+        message: "Buyer SSO user. Login blocked — Buyer SSO accounts use a separate authentication path."
+        sparql: >-
+          PREFIX gep: <http://gep.com/ontology/login#>
+          SELECT $this WHERE {
+            $this gep:userType 0 ;
+                  gep:authenticationType 2 .
+          }
 
   - id: PartnerMappingShape
     target_class: PartnerMapping
@@ -812,7 +904,7 @@ x_shacl_rules:
       - type: sparql
         message: "No active partner mapping (mappingIsActive=1) found for user. Login blocked."
         sparql: >-
-          PREFIX gep: <https://gep.com/ontology/login#>
+          PREFIX gep: <http://gep.com/ontology/login#>
           SELECT $this WHERE {
             $this gep:userId ?uid .
             FILTER NOT EXISTS {
@@ -821,24 +913,42 @@ x_shacl_rules:
             }
           }
 
-  - id: DefaultPartnerShape
-    target_class: PartnerMapping
-    description: "Exactly one partner mapping row must be the default per user"
+  - id: SupplierPartnerMappingShape
+    target_class: User
+    description: >-
+      Supplier users must have at least one active partner mapping with a non-zero BPC.
+      Without a valid active partner, a Supplier cannot login or receive any system emails.
     constraints:
       - type: sparql
-        message: "User must have exactly one default partner mapping (isDefault=1)."
+        message: >-
+          Supplier user has no active partner mapping with a valid (non-zero) BPC.
+          Login and system email notifications are blocked.
         sparql: >-
-          PREFIX gep: <https://gep.com/ontology/login#>
+          PREFIX gep: <http://gep.com/ontology/login#>
           SELECT $this WHERE {
-            $this gep:userId ?uid .
-            {
-              SELECT ?uid (COUNT(?d) AS ?cnt) WHERE {
-                ?d gep:userId ?uid ;
-                   gep:isDefault 1 .
-              } GROUP BY ?uid
+            $this gep:userType 1 ;
+                  gep:userId ?uid .
+            FILTER NOT EXISTS {
+              ?m gep:userId ?uid ;
+                 gep:mappingIsActive 1 ;
+                 gep:bpc ?bpc .
+              FILTER (?bpc != 0)
             }
-            FILTER (?cnt != 1)
           }
+
+  - id: EmailVerificationShape
+    target_class: User
+    description: >-
+      For password-reset and OTP-email flows: the user must have a syntactically
+      valid registered email address so a reset/OTP email can be delivered.
+      Account-active state is intentionally NOT re-checked here — LoginBlockShape
+      (which precedes this shape in the validation_sequence) already covers isActive.
+    constraints:
+      - type: sh_property
+        property: emailAddress
+        min_count: 1
+        pattern: "^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$"
+        message: "No valid registered email address for this user — reset/OTP email cannot be delivered."
 
   - id: MobileConsistencyShape
     type: custom_python
@@ -848,13 +958,13 @@ x_shacl_rules:
       Implemented in mcp_server/tools/validate_data.py.
     implementation_class: "mcp_server.tools.validate_data.MobileConsistencyValidator"
     logic: >-
-      1. Fetch MobileVerificationStatus.isMobileNumberVerifiedSQL for the user (SQL BIT).
+      1. Fetch MobileVerificationStatus.isMobileNumberVerified for the user (SQL BIT).
       2. Normalize SQL BIT: 0→False, 1→True.
       3. Fetch UserDocument.isMobileNumberVerifiedMongo for the user (MongoDB boolean).
       4. Compare normalized values. If different → violation.
     source_a:
       class: MobileVerificationStatus
-      property: isMobileNumberVerifiedSQL
+      property: isMobileNumberVerified
       normalize: BIT_TO_BOOL
     source_b:
       class: UserDocument
@@ -863,3 +973,39 @@ x_shacl_rules:
     message: >-
       Mobile verification mismatch for '{username}':
       SQL={source_a_value}, MongoDB={source_b_value}.
+
+  - id: PartnerMappingDataSyncShape
+    type: custom_python
+    description: >-
+      SQL (UM_UserPartnermapping) and MongoDB (userPartnerMappings) partner data must be in sync.
+      NOT expressible in standard SHACL (cross-source comparison).
+      Implemented in mcp_server/tools/validate_data.py.
+      userId is EXCLUDED from comparison — stored as INT in SQL and string in MongoDB.
+    implementation_class: "mcp_server.tools.validate_data.PartnerMappingDataSyncValidator"
+    logic: >-
+      1. Fetch all PartnerMapping rows from SQL for the user (bpc, partnerCode, mappingIsActive, contactCode).
+      2. Fetch userPartnerMappings array from MongoDB for the user.
+      3. Match pairs by composite key (bpc + partnerCode).
+      4. For each matched pair: compare mappingIsActive, contactCode, bpc, partnerCode.
+      5. Normalize SQL BIT mappingIsActive: 0→false, 1→true before comparing MongoDB boolean isActive.
+      6. Report any field that diverges between SQL and MongoDB for the same (bpc, partnerCode) pair.
+    join_on:
+      - bpc
+      - partnerCode
+    compare_fields:
+      - mappingIsActive
+      - contactCode
+      - bpc
+      - partnerCode
+    exclude_fields:
+      - userId
+    source_a:
+      class: PartnerMapping
+      datasource: sqlserver
+    source_b:
+      class: UserDocument
+      property: userPartnerMappings
+      datasource: mongodb
+    message: >-
+      Partner mapping data sync issue for user '{username}':
+      ({bpc}, {partnerCode}) — SQL={source_a_value}, MongoDB={source_b_value}.

@@ -1,0 +1,60 @@
+id: http://gep.com/ontology/login/entities/mobile-verification#
+name: login-mobile-verification
+
+prefixes:
+  linkml: "https://w3id.org/linkml/"
+  gep:    "http://gep.com/ontology/login#"
+  skos:   "http://www.w3.org/2004/02/skos/core#"
+
+default_prefix: gep
+default_range: string
+
+imports:
+  - linkml:types
+  - ../shared/types
+  - ../shared/subsets
+
+classes:
+
+  MobileVerificationStatus:
+    in_subset:
+      - SqlServerEntities
+      - LoginDiagnostics
+      - CrossSourceCheck
+    description: "SQL-side mobile verification record — UM_UserMobileNumberVerified"
+    annotations:
+      skos:prefLabel: "Mobile Verification Status (SQL)"
+      skos:note: >-
+        Cross-checked against MongoDB UserDocument.isMobileNumberVerifiedMongo.
+        A mismatch between the two is reported as a data sync issue.
+      datasource: sqlserver
+      table: UM_UserMobileNumberVerified
+      foreign_key: "username → User.username"
+    slots:
+      - username
+      - isMobileNumberVerified
+    slot_usage:
+      username:
+        annotations:
+          note: "Foreign key reference to User.username. Not an identifier in this class."
+
+slots:
+
+  isMobileNumberVerified:
+    range: SqlBit
+    required: true
+    minimum_value: 0
+    maximum_value: 1
+    in_subset:
+      - LoginDiagnostics
+      - CrossSourceCheck
+    description: >-
+      SQL BIT flag for mobile number verification (maps to SQL column isMobileNumberverified).
+      Cross-checked against MongoDB isMobileNumberVerifiedMongo.
+      Mismatch = data sync issue — report directly, do not escalate to New Relic.
+    annotations:
+      skos:prefLabel: "Is Mobile Verified (SQL)"
+      sql_column: ismobilenumberverified
+      sql_type: BIT
+      cross_source_check: "UserDocument.isMobileNumberVerifiedMongo"
+      normalization_before_compare: "BIT 0→false, 1→true"

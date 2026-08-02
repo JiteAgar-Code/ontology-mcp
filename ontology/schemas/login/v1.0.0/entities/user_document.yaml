@@ -1,0 +1,327 @@
+id: http://gep.com/ontology/login/entities/user-document#
+name: login-user-document
+
+prefixes:
+  linkml: "https://w3id.org/linkml/"
+  gep:    "http://gep.com/ontology/login#"
+  skos:   "http://www.w3.org/2004/02/skos/core#"
+
+default_prefix: gep
+default_range: string
+
+imports:
+  - linkml:types
+  - ../shared/enums
+  - ../shared/subsets
+  - abstract_user
+
+# ─────────────────────────────────────────────────────────────
+# EMBEDDED DOCUMENT CLASSES
+# These model MongoDB sub-documents (not SQL tables).
+# ─────────────────────────────────────────────────────────────
+
+classes:
+
+  IsdCode:
+    description: "Embedded ISD code object in MongoDB users.isdCode"
+    annotations:
+      skos:prefLabel: "ISD Code Object (MongoDB)"
+      skos:note: "Embedded sub-document — not a separate collection"
+      embedded: true
+      datasource: mongodb
+    slots:
+      - isdCountryCode
+      - isdExtension
+
+  MongoPartnerMapping:
+    description: "Embedded partner mapping sub-document in MongoDB users.userPartnerMappings array"
+    annotations:
+      skos:prefLabel: "Mongo Partner Mapping"
+      skos:note: "Embedded array element — mirrors SQL UM_UserPartnermapping logically"
+      embedded: true
+      datasource: mongodb
+    slots:
+      - mongoMappingUserId
+      - mongoBpc
+      - mongoPartnerCode
+      - mongoMappingIsActive
+      - mongoContactCode
+
+  UserDocument:
+    is_a: AbstractUser
+    in_subset:
+      - MongoDBEntities
+      - LoginDiagnostics
+    description: "User document from MongoDB users collection"
+    annotations:
+      skos:prefLabel: "MongoDB User Document"
+      skos:note: >-
+        Link key to SQL: userName = UM_Users.username.
+        isMobileNumberVerifiedMongo cross-checked with SQL isMobileNumberVerified.
+        isdCode is an embedded object {countryCode, extension}.
+        userPartnerMappings is an array of embedded sub-documents.
+      datasource: mongodb
+      collection: users
+      link_key: userName
+    slots:
+      - userName
+      - emailAddress
+      - firstName
+      - lastName
+      - userType
+      - authenticationType
+      - normalizedUserName
+      - normalizedEmailAddress
+      - normalizedFirstName
+      - normalizedLastName
+      - normalizedFullName
+      - mongoIsActive
+      - mongoIsLocked
+      - mongoIsSystemUser
+      - mongoIsdCode
+      - mobileNo
+      - isMobileNumberVerifiedMongo
+      - userPartnerMappings
+    rules:
+      - title: mongoIsdCode_requires_mobileNo
+        description: "If mongoIsdCode is present, mobileNo must also be present"
+        preconditions:
+          slot_conditions:
+            mongoIsdCode:
+              value_presence: PRESENT
+        postconditions:
+          slot_conditions:
+            mobileNo:
+              value_presence: PRESENT
+      - title: mobileNo_requires_mongoIsdCode
+        description: "If mobileNo is present, mongoIsdCode must also be present"
+        preconditions:
+          slot_conditions:
+            mobileNo:
+              value_presence: PRESENT
+        postconditions:
+          slot_conditions:
+            mongoIsdCode:
+              value_presence: PRESENT
+
+
+# ─────────────────────────────────────────────────────────────
+# USERDOCUMENT SLOTS
+# ─────────────────────────────────────────────────────────────
+
+slots:
+
+  # ── Cross-source link key ─────────────────────────────────
+
+  userName:
+    range: string
+    required: true
+    in_subset:
+      - LoginDiagnostics
+      - CrossSourceCheck
+    description: "MongoDB userName field. Cross-source link key — equals SQL UM_Users.username"
+    annotations:
+      skos:prefLabel: "Username (MongoDB)"
+      mongo_field: userName
+      cross_source_link: "User.username"
+
+  # ── Normalized lookup fields ──────────────────────────────
+
+  normalizedUserName:
+    range: string
+    required: false
+    description: "Lowercase userName. Used for case-insensitive user lookups"
+    annotations:
+      skos:prefLabel: "Normalized Username"
+      skos:note: "Always computed: lowercase(userName)"
+      mongo_field: normalizedUserName
+      derived_from: userName
+      derivation_rule: "lowercase(userName)"
+
+  normalizedEmailAddress:
+    range: string
+    required: false
+    description: "Lowercase emailAddress. Used for case-insensitive email lookups"
+    annotations:
+      skos:prefLabel: "Normalized Email Address"
+      mongo_field: normalizedEmailAddress
+      derived_from: emailAddress
+      derivation_rule: "lowercase(emailAddress)"
+
+  normalizedFirstName:
+    range: string
+    required: false
+    description: "Lowercase firstName. Used for case-insensitive name lookups"
+    annotations:
+      skos:prefLabel: "Normalized First Name"
+      mongo_field: normalizedFirstName
+      derived_from: firstName
+      derivation_rule: "lowercase(firstName)"
+
+  normalizedLastName:
+    range: string
+    required: false
+    description: "Lowercase lastName. Used for case-insensitive name lookups"
+    annotations:
+      skos:prefLabel: "Normalized Last Name"
+      mongo_field: normalizedLastName
+      derived_from: lastName
+      derivation_rule: "lowercase(lastName)"
+
+  normalizedFullName:
+    range: string
+    required: false
+    description: "Lowercase concatenation of first and last name"
+    annotations:
+      skos:prefLabel: "Normalized Full Name"
+      mongo_field: normalizedFullName
+      derived_from: "firstName + lastName"
+      derivation_rule: "lowercase(firstName + ' ' + lastName)"
+
+  # ── Boolean status fields (native MongoDB boolean) ────────
+  # Distinct slot names from SQL BIT equivalents (SqlBit vs boolean)
+
+  mongoIsActive:
+    range: boolean
+    required: false
+    in_subset:
+      - LoginDiagnostics
+    description: "MongoDB native boolean — false means account inactive. Maps to SQL isActive (BIT)"
+    annotations:
+      skos:prefLabel: "Is Active (MongoDB)"
+      mongo_field: isActive
+
+  mongoIsLocked:
+    range: boolean
+    required: false
+    in_subset:
+      - LoginDiagnostics
+    description: "MongoDB native boolean — true means account is locked. Maps to SQL isLocked (BIT)"
+    annotations:
+      skos:prefLabel: "Is Locked (MongoDB)"
+      mongo_field: isLocked
+
+  mongoIsSystemUser:
+    range: boolean
+    required: false
+    description: "MongoDB native boolean — true means internal system account. Maps to SQL isSystemUser (BIT)"
+    annotations:
+      skos:prefLabel: "Is System User (MongoDB)"
+      mongo_field: isSystemUser
+
+  # ── Mobile fields ─────────────────────────────────────────
+
+  mongoIsdCode:
+    range: IsdCode
+    required: false
+    inlined: true
+    description: "Embedded ISD code object {countryCode, extension}. Co-dependent with mobileNo"
+    annotations:
+      skos:prefLabel: "ISD Code (MongoDB)"
+      mongo_field: isdCode
+      co_required_with: mobileNo
+
+  mobileNo:
+    range: string
+    required: false
+    description: "Mobile number in MongoDB. Co-dependent with mongoIsdCode"
+    annotations:
+      skos:prefLabel: "Mobile No (MongoDB)"
+      mongo_field: mobileNo
+      co_required_with: mongoIsdCode
+
+  isMobileNumberVerifiedMongo:
+    range: boolean
+    required: false
+    in_subset:
+      - LoginDiagnostics
+      - CrossSourceCheck
+    description: >-
+      MongoDB native boolean for mobile number verification.
+      Cross-checked against SQL isMobileNumberVerified after BIT normalization.
+    annotations:
+      skos:prefLabel: "Is Mobile Verified (MongoDB)"
+      mongo_field: isMobileNumberVerified
+      cross_source_check: "MobileVerificationStatus.isMobileNumberVerified"
+      normalization_note: "Compare MongoDB true/false with SQL BIT 1/0 after normalization"
+
+  # ── Embedded array ────────────────────────────────────────
+
+  userPartnerMappings:
+    range: MongoPartnerMapping
+    multivalued: true
+    required: false
+    inlined_as_list: true
+    description: "Embedded array of partner mapping sub-documents in MongoDB users document"
+    annotations:
+      skos:prefLabel: "User Partner Mappings (MongoDB)"
+      mongo_field: userPartnerMappings
+      mirrors_sql_table: UM_UserPartnermapping
+
+
+# ─────────────────────────────────────────────────────────────
+# ISDCODE EMBEDDED OBJECT SLOTS
+# ─────────────────────────────────────────────────────────────
+
+  isdCountryCode:
+    range: string
+    required: false
+    description: "Country code inside the isdCode embedded object (e.g. IN, US, GB)"
+    annotations:
+      skos:prefLabel: "Country Code"
+      mongo_field: countryCode
+
+  isdExtension:
+    range: string
+    required: false
+    description: "Dialing extension inside the isdCode embedded object (e.g. +91, +1)"
+    annotations:
+      skos:prefLabel: "ISD Extension"
+      mongo_field: extension
+
+
+# ─────────────────────────────────────────────────────────────
+# MONGOPARTNERMAPPING EMBEDDED OBJECT SLOTS
+# ─────────────────────────────────────────────────────────────
+
+  mongoMappingUserId:
+    range: string
+    required: false
+    description: "userId stored as string inside MongoDB userPartnerMappings sub-document"
+    annotations:
+      skos:prefLabel: "Mapping User ID (MongoDB)"
+      mongo_field: userId
+
+  mongoBpc:
+    range: integer
+    required: false
+    description: "BPC inside MongoDB userPartnerMappings sub-document (INT)"
+    annotations:
+      skos:prefLabel: "BPC (MongoDB)"
+      mongo_field: bpc
+      mongo_type: INT
+
+  mongoPartnerCode:
+    range: integer
+    required: false
+    description: "Partner code inside MongoDB userPartnerMappings sub-document (INT)"
+    annotations:
+      skos:prefLabel: "Partner Code (MongoDB)"
+      mongo_field: partnerCode
+      mongo_type: INT
+
+  mongoMappingIsActive:
+    range: boolean
+    required: false
+    description: "isActive inside MongoDB userPartnerMappings sub-document"
+    annotations:
+      skos:prefLabel: "Is Active (Mongo Mapping)"
+      mongo_field: isActive
+
+  mongoContactCode:
+    range: string
+    required: false
+    description: "contactCode inside MongoDB userPartnerMappings sub-document"
+    annotations:
+      skos:prefLabel: "Contact Code (MongoDB)"
+      mongo_field: contactCode

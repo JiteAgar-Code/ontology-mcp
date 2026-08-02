@@ -1,0 +1,237 @@
+id: http://gep.com/ontology/login/entities/user#
+name: login-user
+
+prefixes:
+  linkml: "https://w3id.org/linkml/"
+  gep:    "http://gep.com/ontology/login#"
+  xsd:    "http://www.w3.org/2001/XMLSchema#"
+  skos:   "http://www.w3.org/2004/02/skos/core#"
+
+default_prefix: gep
+default_range: string
+
+imports:
+  - linkml:types
+  - ../shared/types
+  - ../shared/enums
+  - ../shared/subsets
+  - abstract_user
+
+classes:
+
+  User:
+    is_a: AbstractUser
+    in_subset:
+      - SqlServerEntities
+      - LoginDiagnostics
+    description: "Core user record from SQL Server UM_Users table"
+    annotations:
+      skos:prefLabel: "SQL User"
+      skos:note: >-
+        isLocked=1 OR isActive=0 OR isDeleted=1 blocks login.
+        username is the cross-source link key to MongoDB users.userName.
+      datasource: sqlserver
+      table: UM_Users
+      primary_key: userId
+      link_key: username
+    slots:
+      - userId
+      - username
+      - emailAddress
+      - firstName
+      - lastName
+      - userType
+      - authenticationType
+      - isLocked
+      - isActive
+      - isDeleted
+      - isSystemUser
+      - isdCode
+      - mobileNumber
+      - hasMobileVerificationStatus
+      - hasPartnerMappings
+    slot_usage:
+      userId:
+        identifier: true
+    rules:
+      - title: isdCode_requires_mobileNumber
+        description: "If isdCode is present, mobileNumber must also be present"
+        preconditions:
+          slot_conditions:
+            isdCode:
+              value_presence: PRESENT
+        postconditions:
+          slot_conditions:
+            mobileNumber:
+              value_presence: PRESENT
+      - title: mobileNumber_requires_isdCode
+        description: "If mobileNumber is present, isdCode must also be present"
+        preconditions:
+          slot_conditions:
+            mobileNumber:
+              value_presence: PRESENT
+        postconditions:
+          slot_conditions:
+            isdCode:
+              value_presence: PRESENT
+
+slots:
+
+  userId:
+    range: integer
+    required: true
+    in_subset:
+      - LoginDiagnostics
+    description: "Auto-increment integer primary key in SQL Server UM_Users"
+    annotations:
+      skos:prefLabel: "User ID"
+      skos:definition: "Unique numeric identifier for a user record in SQL Server"
+      sql_column: userid
+      sql_type: INT
+
+  username:
+    range: string
+    required: true
+    in_subset:
+      - LoginDiagnostics
+      - CrossSourceCheck
+    description: "Unique username. Primary cross-source link key to MongoDB users.userName"
+    annotations:
+      skos:prefLabel: "Username"
+      skos:note: "Case-insensitive. Matches MongoDB userName and normalizedUserName"
+      sql_column: username
+      sql_type: NVARCHAR
+      cross_source_link: "UserDocument.userName"
+
+  emailAddress:
+    range: string
+    required: true
+    pattern: "^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$"
+    description: "User email address — stored in both SQL and MongoDB"
+    annotations:
+      skos:prefLabel: "Email Address"
+      sql_column: emailaddress
+      sql_type: NVARCHAR
+      mongo_field: emailAddress
+
+  firstName:
+    range: string
+    required: false
+    description: "User first name — stored in both SQL and MongoDB"
+    annotations:
+      skos:prefLabel: "First Name"
+      sql_column: firstname
+      sql_type: NVARCHAR
+      mongo_field: firstName
+
+  lastName:
+    range: string
+    required: false
+    description: "User last name — stored in both SQL and MongoDB"
+    annotations:
+      skos:prefLabel: "Last Name"
+      sql_column: lastname
+      sql_type: NVARCHAR
+      mongo_field: lastName
+
+  userType:
+    range: UserTypeEnum
+    required: false
+    in_subset:
+      - LoginDiagnostics
+    description: >-
+      User category. Integer in both SQL and MongoDB.
+      0 = Buyer, 1 = Supplier.
+    annotations:
+      skos:prefLabel: "User Type"
+      sql_column: usertype
+      sql_type: INT
+      mongo_field: userType
+      mongo_type: INT
+
+  authenticationType:
+    range: AuthenticationTypeEnum
+    required: true
+    in_subset:
+      - LoginDiagnostics
+    description: >-
+      Authentication mechanism. Integer in both SQL and MongoDB.
+      1 = Non-SSO, 2 = SSO.
+    annotations:
+      skos:prefLabel: "Authentication Type"
+      sql_column: authenticationtype
+      sql_type: INT
+      mongo_field: authenticationType
+      mongo_type: INT
+
+  isLocked:
+    range: SqlBit
+    required: false
+    minimum_value: 0
+    maximum_value: 1
+    in_subset:
+      - LoginDiagnostics
+    description: "SQL BIT — 1 means account is locked. Login is blocked when value = 1"
+    annotations:
+      skos:prefLabel: "Is Locked"
+      sql_column: islocked
+      sql_type: BIT
+      login_block_condition: "value = 1"
+
+  isActive:
+    range: SqlBit
+    required: false
+    minimum_value: 0
+    maximum_value: 1
+    in_subset:
+      - LoginDiagnostics
+    description: "SQL BIT — 0 means account is deactivated. Login is blocked when value = 0"
+    annotations:
+      skos:prefLabel: "Is Active"
+      sql_column: isactive
+      sql_type: BIT
+      login_block_condition: "value = 0"
+
+  isDeleted:
+    range: SqlBit
+    required: false
+    minimum_value: 0
+    maximum_value: 1
+    in_subset:
+      - LoginDiagnostics
+    description: "SQL BIT — 1 means account is soft-deleted. Login is blocked when value = 1"
+    annotations:
+      skos:prefLabel: "Is Deleted"
+      sql_column: isdeleted
+      sql_type: BIT
+      login_block_condition: "value = 1"
+
+  isSystemUser:
+    range: SqlBit
+    required: false
+    minimum_value: 0
+    maximum_value: 1
+    description: "SQL BIT — 1 means this is an internal system or service account"
+    annotations:
+      skos:prefLabel: "Is System User"
+      sql_column: issystemuser
+      sql_type: BIT
+
+  isdCode:
+    range: string
+    required: false
+    description: "International dialing code in SQL (e.g. +91, +1). Co-dependent with mobileNumber"
+    annotations:
+      skos:prefLabel: "ISD Code (SQL)"
+      skos:example: "+91, +1, +44"
+      sql_column: isdcode
+      co_required_with: mobileNumber
+
+  mobileNumber:
+    range: string
+    required: false
+    description: "Mobile phone number in SQL. Co-dependent with isdCode"
+    annotations:
+      skos:prefLabel: "Mobile Number (SQL)"
+      sql_column: mobileno
+      co_required_with: isdCode

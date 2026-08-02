@@ -1,0 +1,51 @@
+id: http://gep.com/ontology/login/shared/enums#
+name: login-enums
+
+prefixes:
+  linkml: "https://w3id.org/linkml/"
+  gep:    "http://gep.com/ontology/login#"
+  skos:   "http://www.w3.org/2004/02/skos/core#"
+
+default_prefix: gep
+default_range: string
+
+imports:
+  - linkml:types
+
+enums:
+
+  AuthenticationTypeEnum:
+    description: "Authentication mechanism for login. Stored as integer in both SQL and MongoDB."
+    annotations:
+      skos:prefLabel: "Authentication Type"
+      skos:definition: "Enumeration of allowed authentication mechanisms for user login."
+      storage_type: integer
+    permissible_values:
+      NonSSO:
+        description: "Non-SSO authentication (username and password)"
+        annotations:
+          integer_value: "1"
+          skos:prefLabel: "Non-SSO"
+      SSO:
+        description: "Single Sign-On via SAML/OAuth/OIDC"
+        annotations:
+          integer_value: "2"
+          skos:prefLabel: "Single Sign-On"
+
+  UserTypeEnum:
+    description: "Category of user in the system. Stored as integer in both SQL and MongoDB."
+    annotations:
+      skos:prefLabel: "User Type"
+      skos:definition: "Enumeration of user categories — Buyer or Supplier."
+      storage_type: integer
+    permissible_values:
+      Buyer:
+        description: "Buyer-side user"
+        annotations:
+          integer_value: "0"
+          skos:prefLabel: "Buyer"
+      Supplier:
+        description: "Supplier-side user"
+        annotations:
+          integer_value: "1"
+          skos:prefLabel: "Supplier"

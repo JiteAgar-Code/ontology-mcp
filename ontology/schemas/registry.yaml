@@ -1,10 +1,10 @@
-# =============================================================
+﻿# =============================================================
 # Schema Registry — Central manifest for all domain ontologies
 # Add a new entry here whenever a new domain YAML is created.
 # =============================================================
 
 registry_version: "1.0.0"
-namespace_base: "https://gep.com/ontology/"
+namespace_base: "http://gep.com/ontology/"
 
 schemas:
 

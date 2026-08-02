@@ -1,0 +1,22 @@
+﻿id: http://gep.com/ontology/login/entities/abstract-user#
+name: login-abstract-user
+
+prefixes:
+  linkml: "https://w3id.org/linkml/"
+  gep:    "http://gep.com/ontology/login#"
+  skos:   "http://www.w3.org/2004/02/skos/core#"
+
+default_prefix: gep
+default_range: string
+
+imports:
+  - linkml:types
+
+classes:
+
+  AbstractUser:
+    abstract: true
+    description: "Abstract base concept — a user account in the system"
+    annotations:
+      skos:prefLabel: "User"
+      skos:definition: "A person who has an account in the system"

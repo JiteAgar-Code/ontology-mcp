@@ -1,0 +1,88 @@
+id: http://gep.com/ontology/login/entities/partner-mapping#
+name: login-partner-mapping
+
+prefixes:
+  linkml: "https://w3id.org/linkml/"
+  gep:    "http://gep.com/ontology/login#"
+  skos:   "http://www.w3.org/2004/02/skos/core#"
+
+default_prefix: gep
+default_range: string
+
+imports:
+  - linkml:types
+  - ../shared/types
+  - ../shared/subsets
+
+classes:
+
+  PartnerMapping:
+    in_subset:
+      - SqlServerEntities
+      - LoginDiagnostics
+    description: "Maps a user to BPC/partner codes — SQL Server UM_UserPartnermapping"
+    annotations:
+      skos:prefLabel: "Partner Mapping"
+      skos:note: >-
+        BPC is the parent grouping; partnerCode is the child code under BPC.
+        At least one row with mappingIsActive=1 is required for login.
+      datasource: sqlserver
+      table: UM_UserPartnermapping
+      foreign_key: "userId → User.userId"
+    slots:
+      - userId
+      - hasUser
+      - bpc
+      - partnerCode
+      - mappingIsActive
+      - contactCode
+
+slots:
+
+  bpc:
+    range: integer
+    required: true
+    description: "Business Partner Code — parent grouping above partnerCode (BIGINT in SQL)"
+    annotations:
+      skos:prefLabel: "BPC"
+      skos:definition: "Higher-level partner grouping. partnerCode is a child of this value."
+      sql_column: bpc
+      sql_type: BIGINT
+      hierarchy_role: parent
+
+  partnerCode:
+    range: integer
+    required: true
+    description: "Partner code — child code nested under a BPC group (INT in SQL)"
+    annotations:
+      skos:prefLabel: "Partner Code"
+      skos:definition: "Specific partner identifier under a BPC group"
+      sql_column: partnercode
+      sql_type: INT
+      hierarchy_role: child
+      parent_slot: bpc
+
+  mappingIsActive:
+    range: SqlBit
+    required: false
+    minimum_value: 0
+    maximum_value: 1
+    in_subset:
+      - LoginDiagnostics
+    description: >-
+      SQL BIT — 1 means this partner mapping row is active (maps to SQL column isActive).
+      Login blocked if no row with mappingIsActive=1 exists for the user.
+    annotations:
+      skos:prefLabel: "Mapping Is Active"
+      sql_column: isactive
+      sql_type: BIT
+      login_block_condition: "no row with value = 1 for this userId"
+
+  contactCode:
+    range: integer
+    required: false
+    description: "Contact code for this partner mapping (BIGINT in SQL)"
+    annotations:
+      skos:prefLabel: "Contact Code"
+      sql_column: contactcode
+      sql_type: BIGINT

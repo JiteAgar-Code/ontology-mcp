@@ -1,4 +1,4 @@
-# get_decision_rules.sparql
+﻿# get_decision_rules.sparql
 #
 # PURPOSE: Return all decision rules from the rules graph, ordered by priority.
 # The agent uses these after SHACL validation to decide what action to take:
@@ -9,7 +9,7 @@
 # PLACEHOLDERS:
 #   __RULES_GRAPH__  e.g. urn:kg:login:v1.0.0:rules
 
-PREFIX gep:  <https://gep.com/ontology/login#>
+PREFIX gep:  <http://gep.com/ontology/login#>
 PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
 
 SELECT

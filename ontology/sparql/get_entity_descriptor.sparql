@@ -1,4 +1,4 @@
-# get_entity_descriptor.sparql
+﻿# get_entity_descriptor.sparql
 #
 # PURPOSE: Return the complete physical descriptor for a single entity class —
 #          datasource, table/collection, link key, and all property mappings.
@@ -8,9 +8,9 @@
 #
 # PLACEHOLDERS:
 #   __DESCRIPTORS_GRAPH__  e.g. urn:kg:login:v1.0.0:descriptors
-#   __ENTITY_IRI__         full IRI, e.g. https://gep.com/ontology/login#User
+#   __ENTITY_IRI__         full IRI, e.g. http://gep.com/ontology/login#User
 
-PREFIX gep: <https://gep.com/ontology/login#>
+PREFIX gep: <http://gep.com/ontology/login#>
 PREFIX xsd: <http://www.w3.org/2001/XMLSchema#>
 
 SELECT

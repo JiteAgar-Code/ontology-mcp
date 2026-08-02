@@ -1,0 +1,25 @@
+﻿id: http://gep.com/ontology/login/shared/types#
+name: login-types
+
+prefixes:
+  linkml: "https://w3id.org/linkml/"
+  xsd:    "http://www.w3.org/2001/XMLSchema#"
+
+default_prefix: http://gep.com/ontology/login/shared/types#
+default_range: string
+
+imports:
+  - linkml:types
+
+types:
+
+  SqlBit:
+    typeof: integer
+    uri: xsd:integer
+    description: >-
+      SQL Server BIT — 0 or 1. Normalize to boolean
+      for cross-source comparison with MongoDB.
+    annotations:
+      note: "Normalize: 0→false, 1→true before comparing with MongoDB boolean."
+      sql_type: BIT
+      logical_type: boolean
