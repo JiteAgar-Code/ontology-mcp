@@ -35,12 +35,15 @@ from _yaml_loader import resolve_schema_path, artifact_dir, load_schema
 
 def _clean_for_linkml(schema_dict: dict) -> dict:
     """
-    Remove all x_ prefixed top-level keys before passing to LinkML generators.
-    These keys (x_intents, x_decision_rules, x_shacl_rules, x_skos_scheme) are
-    custom pipeline extensions. Standard LinkML SchemaDefinition rejects unknown
-    top-level keys with an __init__() error.
+    Remove x_ keys and local imports before passing to LinkML generators.
+    Local imports are already merged by _load_and_merge(); keeping them in
+    the temp file would cause OwlSchemaGenerator (via SchemaView) to chase
+    paths that don't exist next to the temp file and fail.
+    Only linkml: imports remain — generators resolve these internally.
     """
-    return {k: v for k, v in schema_dict.items() if not k.startswith("x_")}
+    cleaned = {k: v for k, v in schema_dict.items() if not k.startswith("x_")}
+    cleaned["imports"] = [i for i in cleaned.get("imports", []) if i.startswith("linkml:")]
+    return cleaned
 
 
 def generate_owl(schema_name: str, version: str) -> Path:

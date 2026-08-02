@@ -38,7 +38,7 @@ def _meta_iri(schema: str) -> str:
 def _schema_iri(schema: str) -> str:
     return f"urn:kg:{schema}:"
 
-GRAPH_TYPES = ["ontology", "shacl", "skos", "descriptors", "rules", "intents"]
+GRAPH_TYPES = ["ontology", "shacl", "skos", "descriptors", "rules"]
 
 
 # ── SPARQL helpers ────────────────────────────────────────────────────
@@ -63,7 +63,7 @@ def _sparql_select_meta(fuseki_base: str, schema: str) -> dict | None:
     meta = _meta_iri(schema)
     root = _schema_iri(schema)
     query = f"""
-SELECT ?version ?ontologyGraph ?shaclGraph ?skosGraph ?descriptorsGraph ?rulesGraph ?intentsGraph
+SELECT ?version ?ontologyGraph ?shaclGraph ?skosGraph ?descriptorsGraph ?rulesGraph
 WHERE {{
     GRAPH <{meta}> {{
         <{root}> <urn:kg:currentVersion>        ?version ;
@@ -71,8 +71,7 @@ WHERE {{
                  <urn:kg:activeShaclGraph>        ?shaclGraph ;
                  <urn:kg:activeSkosGraph>         ?skosGraph ;
                  <urn:kg:activeDescriptorsGraph>  ?descriptorsGraph ;
-                 <urn:kg:activeRulesGraph>        ?rulesGraph ;
-                 <urn:kg:activeIntentsGraph>      ?intentsGraph .
+                 <urn:kg:activeRulesGraph>        ?rulesGraph .
     }}
 }}
 """

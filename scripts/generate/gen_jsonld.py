@@ -1,4 +1,4 @@
-"""
+﻿"""
 gen_jsonld.py — Generate a JSON-LD context + agent descriptor template.
 
 Two outputs:
@@ -7,8 +7,8 @@ Two outputs:
      A standard JSON-LD @context mapping property shortnames to full URIs.
      Used by the agent to interpret any JSON-LD response from the MCP.
      Example:
-       "username" → "https://gep.com/ontology/login#username"
-       "isLocked" → "https://gep.com/ontology/login#isLocked"
+       "username" → "http://gep.com/ontology/login#username"
+       "isLocked" → "http://gep.com/ontology/login#isLocked"
 
   2. {schema}.agent_template.json
      A JSON template showing the exact structure the MCP will return
@@ -70,7 +70,7 @@ def generate_jsonld(schema_name: str, version: str) -> tuple[Path, Path]:
 
     ns_uri      = schema_dict.get("prefixes", {}).get(
         schema_dict.get("default_prefix", "gep"),
-        "https://gep.com/ontology/login#"
+        "http://gep.com/ontology/login#"
     )
 
     print(f"  [gen_jsonld] reading  : {schema_path}")

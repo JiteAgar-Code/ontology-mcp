@@ -1,4 +1,4 @@
-"""
+﻿"""
 gen_rules.py — Generate KG decision-rule triples from a LinkML YAML schema.
 
 What this produces:
@@ -46,7 +46,7 @@ def generate_rules(schema_name: str, version: str) -> Path:
 
     ns_uri = schema_dict.get("prefixes", {}).get(
         schema_dict.get("default_prefix", "gep"),
-        "https://gep.com/ontology/login#"
+        "http://gep.com/ontology/login#"
     )
     GEP = Namespace(ns_uri)
 

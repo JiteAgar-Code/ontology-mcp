@@ -1,4 +1,4 @@
-"""
+﻿"""
 load_kg.py — Load ontology artifacts into Apache Jena / Fuseki Knowledge Graph.
 
 Usage:
@@ -6,13 +6,15 @@ Usage:
     python scripts/load_kg.py --schema login --version 1.0.0 --fuseki http://localhost:3030
     python scripts/load_kg.py --schema login --version 1.0.0 --dry-run
 
-What it loads (6 named graphs):
+What it loads (5 named graphs):
     urn:kg:{schema}:v{version}:ontology     ← login.owl.ttl
     urn:kg:{schema}:v{version}:shacl        ← login.shacl.ttl
     urn:kg:{schema}:v{version}:skos         ← login.skos.ttl
     urn:kg:{schema}:v{version}:rules        ← login.rules.ttl
     urn:kg:{schema}:v{version}:descriptors  ← login.descriptors.json (converted to RDF)
-    urn:kg:{schema}:v{version}:intents      ← x_intents from YAML + agent_template.json
+
+Diagnosis playbooks (x_capability_registry) are read directly from the schema
+YAML at query time — they are NOT loaded into the KG.
 
 Then updates:
     urn:kg:{schema}:meta                    ← version pointer (currentVersion → this version)
@@ -53,20 +55,10 @@ sys.path.insert(0, str(Path(__file__).parent.parent / "generate"))
 from _yaml_loader import load_schema, ARTIFACTS_ROOT
 
 # ── KG vocabulary ─────────────────────────────────────────────────────
-# Used in the descriptors and intents graphs.
+# Used in the descriptors graph.
 # These terms are specific to our KG loading process, not LinkML-generated.
-_KG_URI  = "urn:kg:"
 _EntityDescriptor   = "EntityDescriptor"
 _PropertyDescriptor = "PropertyDescriptor"
-_Intent             = "Intent"
-_SchemaRegistry     = URIRef("urn:kg:SchemaRegistry")
-_currentVersion         = URIRef("urn:kg:currentVersion")
-_activeOntologyGraph    = URIRef("urn:kg:activeOntologyGraph")
-_activeShaclGraph       = URIRef("urn:kg:activeShaclGraph")
-_activeSkosGraph        = URIRef("urn:kg:activeSkosGraph")
-_activeDescriptorsGraph = URIRef("urn:kg:activeDescriptorsGraph")
-_activeRulesGraph       = URIRef("urn:kg:activeRulesGraph")
-_activeIntentsGraph     = URIRef("urn:kg:activeIntentsGraph")
 
 
 # ── Named graph IRI helpers ───────────────────────────────────────────
@@ -154,7 +146,7 @@ def _descriptors_to_rdf(desc_json: dict) -> str:
       gep:normalizeToBool    — true if BIT 0/1 must be normalized
       gep:loginBlockCondition — condition string that blocks login
     """
-    namespace = desc_json.get("namespace", "https://gep.com/ontology/login#")
+    namespace = desc_json.get("namespace", "http://gep.com/ontology/login#")
     if not namespace.endswith("#"):
         namespace += "#"
 
@@ -216,62 +208,6 @@ def _descriptors_to_rdf(desc_json: dict) -> str:
     return g.serialize(format="turtle")
 
 
-# ── Intents YAML + agent_template → RDF ──────────────────────────────
-
-def _intents_to_rdf(x_intents: list, agent_template: dict, namespace: str) -> str:
-    """
-    Build the intents named graph from two sources:
-      1. x_intents in YAML → match_patterns, entities, validation shapes
-      2. agent_template.json → decision rule links per intent
-    """
-    if not namespace.endswith("#"):
-        namespace += "#"
-
-    GEP  = Namespace(namespace)
-    g    = Graph()
-    g.bind("gep",  GEP)
-    g.bind("rdfs", RDFS)
-
-    Intent = GEP[_Intent]
-
-    # Build intent_id → [rule IRIs] from agent_template
-    intent_rules: dict[str, list[str]] = {}
-    for intent in agent_template.get("intents", []):
-        intent_id = intent.get("intent_id", "")
-        rules = []
-        for r in intent.get("decision_rules", []):
-            rule_ref = r.get("@id", "")
-            if rule_ref.startswith("gep:"):
-                rules.append(namespace + rule_ref[4:])
-            elif rule_ref.startswith("http"):
-                rules.append(rule_ref)
-        intent_rules[intent_id] = rules
-
-    for intent in x_intents:
-        intent_id  = intent.get("id", "")
-        intent_uri = GEP[intent_id]
-
-        g.add((intent_uri, RDF.type, Intent))
-        g.add((intent_uri, GEP.intentName, Literal(intent.get("name", intent_id))))
-
-        if intent.get("description"):
-            g.add((intent_uri, RDFS.comment, Literal(intent["description"])))
-
-        for pattern in intent.get("match_patterns", []):
-            g.add((intent_uri, GEP.textPattern, Literal(pattern)))
-
-        for entity_name in intent.get("entities", []):
-            g.add((intent_uri, GEP.involvesEntity, GEP[entity_name]))
-
-        for shape_name in intent.get("validation_sequence", []):
-            g.add((intent_uri, GEP.hasValidationShape, GEP[shape_name]))
-
-        for rule_iri in intent_rules.get(intent_id, []):
-            g.add((intent_uri, GEP.hasDecisionRule, URIRef(rule_iri)))
-
-    return g.serialize(format="turtle")
-
-
 # ── Meta graph update ─────────────────────────────────────────────────
 
 def _build_meta_update(schema: str, version: str) -> str:
@@ -282,7 +218,7 @@ def _build_meta_update(schema: str, version: str) -> str:
     """
     meta  = _meta_iri(schema)
     root  = _schema_iri(schema)
-    types = ["ontology", "shacl", "skos", "descriptors", "rules", "intents"]
+    types = ["ontology", "shacl", "skos", "descriptors", "rules"]
     # Predicate-object pairs only — subject (<root>) is already open from the ; chain above
     active_triples = "\n".join(
         f'                 <urn:kg:active{t.capitalize()}Graph> <{_graph_iri(schema, version, t)}> ;'
@@ -324,7 +260,7 @@ def load_kg(schema: str, version: str, fuseki_url: str, dry_run: bool) -> bool:
         print("  Fuseki OK")
 
     schema_dict    = load_schema(schema, version)
-    namespace      = schema_dict.get("id", f"https://gep.com/ontology/{schema}#")
+    namespace      = schema_dict.get("id", f"http://gep.com/ontology/{schema}#")
 
     # ── Artifact file paths ───────────────────────────────────────
     ttl_graphs = [
@@ -383,23 +319,7 @@ def load_kg(schema: str, version: str, fuseki_url: str, dry_run: bool) -> bool:
         results["descriptors"] = (f"❌ FAILED: {exc}", time.time() - t)
         print(f"  └─ FAILED: {exc}")
 
-    # ── Stage 3: Intents YAML + agent_template → RDF ─────────────
-    print("\n▶ [INTENTS]")
-    t = time.time()
-    try:
-        x_intents      = schema_dict.get("x_intents", [])
-        agent_template = json.loads(template_path.read_text(encoding="utf-8"))
-        intents_ttl    = _intents_to_rdf(x_intents, agent_template, namespace)
-        g_uri          = _graph_iri(schema, version, "intents")
-        _put_graph(fuseki_base, g_uri, intents_ttl, dry_run)
-        results["intents"] = ("✅ OK", time.time() - t)
-        print(f"  → <{g_uri}>")
-        print(f"  └─ done in {time.time() - t:.2f}s")
-    except Exception as exc:
-        results["intents"] = (f"❌ FAILED: {exc}", time.time() - t)
-        print(f"  └─ FAILED: {exc}")
-
-    # ── Stage 4: Update meta graph ────────────────────────────────
+    # ── Stage 3: Update meta graph ────────────────────────────────
     print("\n▶ [META]")
     t = time.time()
     try:

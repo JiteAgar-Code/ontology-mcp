@@ -1,4 +1,4 @@
-"""
+﻿"""
 gen_skos.py — Generate a SKOS concept scheme from a LinkML YAML schema.
 
 What this produces (from x_skos_scheme section):
@@ -35,7 +35,7 @@ from _yaml_loader import resolve_schema_path, artifact_dir, load_schema
 def _ns(schema_dict: dict) -> Namespace:
     """Return the primary namespace from the schema prefixes."""
     prefix = schema_dict.get("default_prefix", "gep")
-    uri    = schema_dict.get("prefixes", {}).get(prefix, "https://gep.com/ontology/login#")
+    uri    = schema_dict.get("prefixes", {}).get(prefix, "http://gep.com/ontology/login#")
     return Namespace(uri)
 
 
